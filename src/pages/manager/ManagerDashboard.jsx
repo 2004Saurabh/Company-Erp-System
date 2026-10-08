@@ -10,7 +10,8 @@ import {
   TrendingUp,
   Award,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Home
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -33,6 +34,7 @@ import StatCard from '../../components/StatCard';
 import ChartCard from '../../components/ChartCard';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
+import WFHPersonnelWidget from '../../components/WFHPersonnelWidget';
 import TaskModal from '../../components/modals/TaskModal';
 import ProjectModal from '../../components/modals/ProjectModal';
 
@@ -55,6 +57,8 @@ export const ManagerDashboard = () => {
   const todayStr = '2026-10-01';
   const teamAttendance = attendance.filter(a => a.date === todayStr && teamMembers.some(tm => tm.id === a.employeeId));
   const presentCount = teamAttendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
+  const teamWfhRecords = teamAttendance.filter(a => a.isWFH || a.workMode === 'Work From Home' || a.networkName?.includes('Work From Home'));
+  const teamWfhCount = teamWfhRecords.length;
 
   const teamProjects = projects.filter(p => p.manager === 'Marcus Sterling' || p.department === 'Engineering');
   const pendingLeaveCount = leaves.filter(l => l.status === 'Pending' && teamMembers.some(tm => tm.id === l.employeeId)).length;
@@ -205,6 +209,15 @@ export const ManagerDashboard = () => {
           linkTo="/manager/performance"
         />
         <StatCard
+          title="Team WFH Today"
+          value={teamWfhCount}
+          comparisonText="Engineers on remote shift"
+          icon={Home}
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-indigo-50 dark:bg-indigo-950/60"
+          linkTo="/manager/attendance"
+        />
+        <StatCard
           title="Upcoming Deadlines"
           value="3"
           comparisonText="Next 7 days"
@@ -264,6 +277,14 @@ export const ManagerDashboard = () => {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* Engineering Team Remote / WFH Status */}
+      <WFHPersonnelWidget
+        departmentFilter="Engineering"
+        title="Engineering Team WFH Today"
+        subtitle="Direct reports currently active on remote shift with verified HR authorization"
+        showMarkButton={false}
+      />
 
       {/* Row 2: Projects Overview */}
       <ChartCard

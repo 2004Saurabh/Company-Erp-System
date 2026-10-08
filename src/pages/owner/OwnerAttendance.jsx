@@ -190,10 +190,11 @@ export const OwnerAttendance = () => {
         <StatCard
           title="Work From Home (WFH)"
           value={wfhCount}
-          comparisonText="HR Authorized Remote"
+          comparisonText={filterStatus === 'WFH' ? 'Active filter (Click to reset)' : 'Click to filter remote'}
           icon={Home}
           iconColor="text-indigo-600"
           iconBg="bg-indigo-50 dark:bg-indigo-950/60"
+          onClick={() => setFilterStatus(filterStatus === 'WFH' ? 'All' : 'WFH')}
         />
         <StatCard
           title="Late Arrivals"
@@ -221,18 +222,46 @@ export const OwnerAttendance = () => {
         searchPlaceholder="Search by employee name or ID..."
         pageSize={8}
         filterComponent={
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Present">Present</option>
-            <option value="WFH">Work From Home (WFH)</option>
-            <option value="Late">Late</option>
-            <option value="On Leave">On Leave</option>
-            <option value="Absent">Absent</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setFilterStatus('All')}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                  filterStatus === 'All'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                All Staff
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus(filterStatus === 'WFH' ? 'All' : 'WFH')}
+                className={`px-3 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all ${
+                  filterStatus === 'WFH'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5" />
+                Work From Home ({wfhCount})
+              </button>
+            </div>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Present">Present (Office & WFH)</option>
+              <option value="WFH">Work From Home (WFH Only)</option>
+              <option value="Late">Late</option>
+              <option value="On Leave">On Leave</option>
+              <option value="Absent">Absent</option>
+            </select>
+          </div>
         }
       />
 

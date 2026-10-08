@@ -100,6 +100,15 @@ export const ERPProvider = ({ children }) => {
       if (a.id === 'ATT-301' && a.checkIn === '09:05 AM' && !a.checkOut) {
         return { ...a, checkIn: null, checkOut: null, workHours: 0, status: 'Absent' };
       }
+      if (a.id === 'ATT-308' && !a.isWFH) {
+        return {
+          ...a,
+          isWFH: true,
+          workMode: 'Work From Home',
+          networkName: 'Work From Home (HR Authorized)',
+          networkVerified: true
+        };
+      }
       return a;
     });
   });

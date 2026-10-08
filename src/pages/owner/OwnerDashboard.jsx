@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   FileText,
   BarChart3,
-  CreditCard
+  CreditCard,
+  Home
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -38,6 +39,7 @@ import StatCard from '../../components/StatCard';
 import ChartCard from '../../components/ChartCard';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
+import WFHPersonnelWidget from '../../components/WFHPersonnelWidget';
 import EmployeeModal from '../../components/modals/EmployeeModal';
 import ProjectModal from '../../components/modals/ProjectModal';
 import DepartmentModal from '../../components/modals/DepartmentModal';
@@ -57,6 +59,11 @@ export const OwnerDashboard = () => {
   const totalPayrollMonthly = payroll
     .filter(p => p.month.includes('September 2026'))
     .reduce((acc, curr) => acc + (curr.netSalary || 0), 0);
+
+  const todayStr = '2026-10-01';
+  const todayAttendance = (attendance || []).filter(a => a.date === todayStr);
+  const wfhList = todayAttendance.filter(a => a.isWFH || a.workMode === 'Work From Home' || a.networkName?.includes('Work From Home'));
+  const wfhCount = wfhList.length;
 
   // Chart Data: Revenue vs Expense
   const financialData = [
@@ -251,6 +258,15 @@ export const OwnerDashboard = () => {
           iconBg="bg-sky-50 dark:bg-sky-950/60"
           linkTo="/owner/projects"
         />
+        <StatCard
+          title="Work From Home (WFH)"
+          value={wfhCount}
+          comparisonText="Remote authorized personnel"
+          icon={Home}
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-indigo-50 dark:bg-indigo-950/60"
+          linkTo="/owner/attendance"
+        />
       </div>
 
       {/* Row 1: Charts (Revenue vs Expenses & Employee Growth) */}
@@ -382,6 +398,12 @@ export const OwnerDashboard = () => {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* Live Remote Workforce / WFH Personnel Widget */}
+      <WFHPersonnelWidget
+        title="Enterprise Work From Home (WFH) Roster"
+        subtitle="Remote personnel actively logged with verified HR authorization"
+      />
 
       {/* Recent Strategic Activity & Approvals Stream */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

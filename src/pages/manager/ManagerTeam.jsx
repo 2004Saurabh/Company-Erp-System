@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Mail, Phone, Plus, CheckSquare, Award } from 'lucide-react';
+import { Users, Mail, Phone, Plus, CheckSquare, Award, Home, ShieldCheck } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import Avatar from '../../components/Avatar';
 import Badge from '../../components/Badge';
@@ -7,10 +7,17 @@ import Button from '../../components/Button';
 import TaskModal from '../../components/modals/TaskModal';
 
 export const ManagerTeam = () => {
-  const { employees, tasks } = useERP();
+  const { employees, tasks, attendance } = useERP();
   const [selectedEmpForTask, setSelectedEmpForTask] = useState(null);
 
   const team = employees.filter(e => e.department === 'Engineering');
+  const todayStr = '2026-10-01';
+
+  // Team WFH statistics
+  const teamWfhMembers = team.filter(member => {
+    const record = (attendance || []).find(a => (a.employeeId === member.id || a.employeeName === member.fullName) && a.date === todayStr);
+    return Boolean(record && (record.isWFH || record.workMode === 'Work From Home' || record.networkName?.includes('Work From Home')));
+  });
 
   return (
     <div className="space-y-6">
@@ -24,6 +31,15 @@ export const ManagerTeam = () => {
             Direct reports, technical specializations, workload balances, and active task queues
           </p>
         </div>
+
+        {/* Live Remote Status Pill */}
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800 text-xs">
+          <Home className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span className="font-medium text-slate-700 dark:text-slate-300">Remote Attendance:</span>
+          <span className="font-bold text-indigo-600 dark:text-indigo-400">
+            {teamWfhMembers.length} of {team.length} WFH Today
+          </span>
+        </div>
       </div>
 
       {/* Grid */}
@@ -31,19 +47,33 @@ export const ManagerTeam = () => {
         {team.map((member) => {
           const memberTasks = tasks.filter(t => t.assignedToId === member.id || t.assignedTo === member.fullName);
           const completedCount = memberTasks.filter(t => t.status === 'Completed').length;
+          const memberAttendance = (attendance || []).find(a => (a.employeeId === member.id || a.employeeName === member.fullName) && a.date === todayStr);
+          const isMemberWFH = Boolean(memberAttendance && (memberAttendance.isWFH || memberAttendance.workMode === 'Work From Home' || memberAttendance.networkName?.includes('Work From Home')));
 
           return (
             <div
               key={member.id}
-              className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+              className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border transition-all flex flex-col justify-between hover:shadow-md ${
+                isMemberWFH
+                  ? 'border-indigo-200 dark:border-indigo-800/80 ring-1 ring-indigo-500/10'
+                  : 'border-slate-200/80 dark:border-slate-800'
+              }`}
             >
               <div>
                 <div className="flex items-start gap-3.5">
                   <Avatar src={member.avatar} name={member.fullName} size="lg" status="online" />
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
-                      {member.fullName}
-                    </h3>
+                    <div className="flex items-center justify-between gap-1">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                        {member.fullName}
+                      </h3>
+                      {isMemberWFH && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                          <Home className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                          WFH
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium truncate">
                       {member.designation}
                     </p>
@@ -92,9 +122,16 @@ export const ManagerTeam = () => {
               </div>
 
               <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <Badge variant={member.status === 'Active' ? 'success' : 'neutral'} size="sm" dot>
-                  {member.status}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant={member.status === 'Active' ? 'success' : 'neutral'} size="sm" dot>
+                    {member.status}
+                  </Badge>
+                  {isMemberWFH && (
+                    <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
+                      Remote ({memberAttendance?.checkIn || '09:00 AM'})
+                    </span>
+                  )}
+                </div>
                 <Button
                   variant="outline"
                   size="sm"

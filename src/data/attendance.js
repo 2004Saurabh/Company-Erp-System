@@ -85,7 +85,12 @@ export const INITIAL_ATTENDANCE = [
     checkIn: '08:55 AM',
     checkOut: null,
     workHours: 4.4,
-    status: 'Present'
+    status: 'Present',
+    isWFH: true,
+    workMode: 'Work From Home',
+    networkName: 'Work From Home (HR Authorized)',
+    networkVerified: true,
+    notes: 'Approved remote sprint task delivery'
   },
   {
     id: 'ATT-309',

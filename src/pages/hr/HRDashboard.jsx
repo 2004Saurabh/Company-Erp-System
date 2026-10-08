@@ -37,6 +37,7 @@ import StatCard from '../../components/StatCard';
 import ChartCard from '../../components/ChartCard';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
+import WFHPersonnelWidget from '../../components/WFHPersonnelWidget';
 import EmployeeModal from '../../components/modals/EmployeeModal';
 import MarkWFHAttendanceModal from '../../components/modals/MarkWFHAttendanceModal';
 
@@ -53,6 +54,8 @@ export const HRDashboard = () => {
   const presentCount = todayAttendance.filter(a => a.status === 'Present').length;
   const lateCount = todayAttendance.filter(a => a.status === 'Late').length;
   const onLeaveCount = todayAttendance.filter(a => a.status === 'On Leave').length;
+  const wfhList = todayAttendance.filter(a => a.isWFH || a.workMode === 'Work From Home' || a.networkName?.includes('Work From Home'));
+  const wfhCount = wfhList.length;
   const attendanceRate = Math.round(((presentCount + lateCount) / (employees.length || 1)) * 100);
 
   const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
@@ -217,12 +220,13 @@ export const HRDashboard = () => {
           linkTo="/hr/recruitment"
         />
         <StatCard
-          title="Birthdays This Month"
-          value="3"
-          comparisonText="Elena, Zoe, Liam"
-          icon={Cake}
-          iconColor="text-rose-500"
-          iconBg="bg-rose-50 dark:bg-rose-950/60"
+          title="Work From Home (WFH)"
+          value={wfhCount}
+          comparisonText="HR-authorized remote shifts"
+          icon={Home}
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-indigo-50 dark:bg-indigo-950/60"
+          linkTo="/hr/attendance"
         />
         <StatCard
           title="Attendance SLA"
@@ -237,6 +241,12 @@ export const HRDashboard = () => {
           linkTo="/hr/attendance"
         />
       </div>
+
+      {/* Live Remote Workforce / WFH Personnel Widget */}
+      <WFHPersonnelWidget
+        title="Active Work From Home (WFH) Staff"
+        subtitle="Staff members authorized to clock in remotely with office WiFi geofence bypass"
+      />
 
       {/* Row 1: Charts (Employee Growth & Weekly Attendance) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

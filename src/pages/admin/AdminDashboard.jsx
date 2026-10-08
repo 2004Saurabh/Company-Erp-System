@@ -25,7 +25,8 @@ import {
   CheckSquare,
   Wifi,
   WifiOff,
-  Radio
+  Radio,
+  Home
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,6 +50,7 @@ import StatCard from '../../components/StatCard';
 import ChartCard from '../../components/ChartCard';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
+import WFHPersonnelWidget from '../../components/WFHPersonnelWidget';
 import EmployeeModal from '../../components/modals/EmployeeModal';
 import ProjectModal from '../../components/modals/ProjectModal';
 import DepartmentModal from '../../components/modals/DepartmentModal';
@@ -90,6 +92,11 @@ export const AdminDashboard = () => {
   const activeTasks = (tasks || []).filter(t => t.status !== 'Completed').length;
   const completedTasks = (tasks || []).filter(t => t.status === 'Completed').length;
   const openPositions = (jobOpenings || []).filter(j => j.status === 'Open').length;
+
+  const todayStr = '2026-10-01';
+  const todayAttendance = (attendance || []).filter(a => a.date === todayStr);
+  const wfhList = todayAttendance.filter(a => a.isWFH || a.workMode === 'Work From Home' || a.networkName?.includes('Work From Home'));
+  const wfhCount = wfhList.length;
 
   const totalPayrollMonthly = (payroll || [])
     .filter(p => p.month?.includes('September 2026'))
@@ -238,7 +245,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Row 2: Operational KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
         <StatCard
           title="Monthly Payroll"
           prefix="₹"
@@ -250,6 +257,15 @@ export const AdminDashboard = () => {
           iconColor="text-amber-600 dark:text-amber-400"
           iconBg="bg-amber-50 dark:bg-amber-950/60"
           linkTo="/admin/payroll"
+        />
+        <StatCard
+          title="Remote Staff (WFH)"
+          value={wfhCount}
+          comparisonText="HR-authorized remote"
+          icon={Home}
+          iconColor="text-indigo-600 dark:text-indigo-400"
+          iconBg="bg-indigo-50 dark:bg-indigo-950/60"
+          linkTo="/admin/attendance"
         />
         <StatCard
           title="Pending Approvals"
@@ -632,6 +648,12 @@ export const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Live Remote Workforce / WFH Personnel Widget */}
+      <WFHPersonnelWidget
+        title="Active Work From Home (WFH) Staff"
+        subtitle="Personnel currently operating on verified remote shift with office WiFi geofence bypass"
+      />
 
       {/* Office WiFi Attendance Access Control (Admin Authority Panel) */}
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
