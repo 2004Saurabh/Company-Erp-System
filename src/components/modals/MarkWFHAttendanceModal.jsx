@@ -15,13 +15,21 @@ import Button from '../Button';
 import Input from '../Input';
 import Select from '../Select';
 import { useERP } from '../../context/ERPContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const MarkWFHAttendanceModal = ({
   isOpen,
   onClose,
   initialEmployeeId = null
 }) => {
-  const { employees, markWFHAttendance } = useERP();
+  const {
+    employees,
+    markWFHAttendance,
+    getEmployeeWFHAuthInfo,
+    isEmployeeWFHAuthorized,
+    authorizeEmployeeWFH
+  } = useERP();
+  const { role } = useAuth();
 
   const [selectedEmpId, setSelectedEmpId] = useState(initialEmployeeId || 'EMP-1004');
   const [date, setDate] = useState('2026-10-01');
@@ -41,16 +49,28 @@ export const MarkWFHAttendanceModal = ({
   if (!isOpen) return null;
 
   const currentEmployee = employees.find(e => e.id === selectedEmpId) || employees[0];
+  const authInfo = currentEmployee ? getEmployeeWFHAuthInfo(currentEmployee.id) : null;
+  const isAuthorized = Boolean(authInfo);
 
   const handleEmployeeChange = (empId) => {
     setSelectedEmpId(empId);
+  };
+
+  const handleQuickAuthorizeAsAdmin = () => {
+    if (currentEmployee) {
+      authorizeEmployeeWFH({
+        employeeId: currentEmployee.id,
+        reason: 'Direct Administrator Approval',
+        notes: 'Pre-authorized for HR remote attendance entry'
+      });
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentEmployee) return;
 
-    markWFHAttendance({
+    const res = markWFHAttendance({
       employeeId: currentEmployee.id,
       date,
       checkIn,
@@ -60,13 +80,18 @@ export const MarkWFHAttendanceModal = ({
       notes
     });
 
-    onClose();
+    if (res?.success) {
+      onClose();
+    }
   };
 
-  const employeeOptions = employees.map(e => ({
-    value: e.id,
-    label: `${e.id} — ${e.fullName} (${e.department})`
-  }));
+  const employeeOptions = employees.map(e => {
+    const auth = isEmployeeWFHAuthorized(e.id);
+    return {
+      value: e.id,
+      label: `${e.id} — ${e.fullName} (${e.department}) ${auth ? '✅ [Admin Authorized]' : '⚠️ [Pending Admin Auth]'}`
+    };
+  });
 
   return (
     <Modal
@@ -80,14 +105,20 @@ export const MarkWFHAttendanceModal = ({
           <span>Mark Work From Home (WFH) Attendance</span>
         </div>
       }
-      subtitle="HR Remote Attendance Override · Authorize attendance for remote workers by Employee ID"
+      subtitle="HR Remote Attendance Override · Restricted to Admin-Authorized Employee ID Cards"
       maxWidth="max-w-xl"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit} icon={UserCheck}>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            icon={UserCheck}
+            disabled={!isAuthorized}
+            className={!isAuthorized ? 'opacity-50 cursor-not-allowed bg-slate-600' : ''}
+          >
             Confirm & Mark Attendance
           </Button>
         </>
@@ -132,10 +163,55 @@ export const MarkWFHAttendanceModal = ({
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-semibold px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200 dark:border-emerald-800">
-                Active Staff
+              <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg border ${
+                isAuthorized
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 border-rose-200 dark:border-rose-800'
+              }`}>
+                {isAuthorized ? 'Admin WFH Authorized' : 'Pending Admin Auth'}
               </span>
             </div>
+          )}
+
+          {/* Admin Verification Status Banner */}
+          {currentEmployee && (
+            isAuthorized ? (
+              <div className="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Admin ID Verified:</span> Pre-authorized by {authInfo?.authorizedBy || 'Admin'}
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-300 block">
+                      Purpose: {authInfo?.reason || 'Approved Remote Assignment'} · Valid: {authInfo?.validUntil || '2026-10-31'}
+                    </span>
+                  </div>
+                </div>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold border border-emerald-200 dark:border-emerald-700">
+                  {authInfo?.id}
+                </span>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-start gap-2 text-rose-900 dark:text-rose-200">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Admin WFH Authorization Required</span>
+                    <span>Employee ID <strong>"{currentEmployee?.id}"</strong> is not authorized for Work From Home by Administrator. HR cannot record attendance until Admin registers this ID.</span>
+                  </div>
+                </div>
+                {role === 'admin' && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="xs"
+                    onClick={handleQuickAuthorizeAsAdmin}
+                    className="shrink-0 bg-indigo-600 font-bold"
+                  >
+                    Authorize Now (Admin)
+                  </Button>
+                )}
+              </div>
+            )
           )}
         </div>
 

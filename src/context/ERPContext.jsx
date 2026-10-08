@@ -19,6 +19,37 @@ const ERPContext = createContext();
 
 export const CURRENT_DATE_REF = '2026-10-07';
 
+export const INITIAL_WFH_AUTHORIZED = [
+  {
+    id: 'WFH-AUTH-1001',
+    employeeId: 'EMP-1004',
+    employeeName: 'Elena Rostova',
+    department: 'Engineering',
+    designation: 'Senior Frontend Engineer',
+    authorizedBy: 'Administrator (Saurabh Kumar)',
+    authorizedDate: '2026-09-28',
+    validUntil: '2026-10-31',
+    status: 'Authorized',
+    reason: 'Remote Project Sprint Delivery (Austin/Remote)',
+    idCardVerified: true,
+    notes: 'Official Admin ID authorization for remote geofence exemption'
+  },
+  {
+    id: 'WFH-AUTH-1002',
+    employeeId: 'EMP-1008',
+    employeeName: 'Clara Oswald',
+    department: 'Engineering',
+    designation: 'Staff Backend Architect',
+    authorizedBy: 'Administrator (Saurabh Kumar)',
+    authorizedDate: '2026-09-25',
+    validUntil: '2026-10-31',
+    status: 'Authorized',
+    reason: 'Cloud Infrastructure Migration & Remote Standup',
+    idCardVerified: true,
+    notes: 'Admin pre-approved WFH ID access'
+  }
+];
+
 export const getEffectiveStatus = (task, todayStr = CURRENT_DATE_REF) => {
   if (!task) return 'Pending';
   if (task.status === 'Completed') return 'Completed';
@@ -148,6 +179,7 @@ export const ERPProvider = ({ children }) => {
   const [companyWifis, setCompanyWifis] = useState(() => loadState('company_wifis', INITIAL_COMPANY_WIFIS));
   const [currentNetwork, setCurrentNetwork] = useState(() => loadState('current_network', AVAILABLE_SIMULATION_NETWORKS[0]));
   const [wifiEnforcementEnabled, setWifiEnforcementEnabled] = useState(() => loadState('wifi_enforcement', true));
+  const [wfhAuthorizedEmployees, setWfhAuthorizedEmployees] = useState(() => loadState('wfh_authorized', INITIAL_WFH_AUTHORIZED));
 
   // Sync to localStorage
   useEffect(() => { localStorage.setItem('nexora_employees', JSON.stringify(employees)); }, [employees]);
@@ -167,6 +199,7 @@ export const ERPProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('nexora_company_wifis', JSON.stringify(companyWifis)); }, [companyWifis]);
   useEffect(() => { localStorage.setItem('nexora_current_network', JSON.stringify(currentNetwork)); }, [currentNetwork]);
   useEffect(() => { localStorage.setItem('nexora_wifi_enforcement', JSON.stringify(wifiEnforcementEnabled)); }, [wifiEnforcementEnabled]);
+  useEffect(() => { localStorage.setItem('nexora_wfh_authorized', JSON.stringify(wfhAuthorizedEmployees)); }, [wfhAuthorizedEmployees]);
 
   // Log Action Helper
   const logAudit = (action, module, details) => {
@@ -666,6 +699,86 @@ export const ERPProvider = ({ children }) => {
     addToast('Attendance reset! Check In button is now available.', 'info');
   };
 
+  // =================== ADMIN WFH ID AUTHORIZATION ===================
+  const isEmployeeWFHAuthorized = (empId) => {
+    if (!empId) return false;
+    const cleanId = String(empId).trim().toUpperCase();
+    return wfhAuthorizedEmployees.some(
+      a => (a.employeeId?.toUpperCase() === cleanId || a.employeeName?.toLowerCase() === String(empId).trim().toLowerCase()) && a.status === 'Authorized'
+    );
+  };
+
+  const getEmployeeWFHAuthInfo = (empId) => {
+    if (!empId) return null;
+    const cleanId = String(empId).trim().toUpperCase();
+    return wfhAuthorizedEmployees.find(
+      a => (a.employeeId?.toUpperCase() === cleanId || a.employeeName?.toLowerCase() === String(empId).trim().toLowerCase()) && a.status === 'Authorized'
+    );
+  };
+
+  const authorizeEmployeeWFH = ({ employeeId, reason, validUntil, notes }) => {
+    const cleanId = String(employeeId || '').trim();
+    const emp = employees.find(
+      e => e.id?.toUpperCase() === cleanId.toUpperCase() || e.fullName.toLowerCase() === cleanId.toLowerCase()
+    );
+
+    if (!emp) {
+      addToast(`Employee with ID or name "${employeeId}" not found in employee directory.`, 'error');
+      return { success: false, reason: 'EMPLOYEE_NOT_FOUND' };
+    }
+
+    const existing = wfhAuthorizedEmployees.find(a => a.employeeId === emp.id);
+    const newAuth = {
+      id: existing?.id || `WFH-AUTH-${Date.now().toString().slice(-4)}`,
+      employeeId: emp.id,
+      employeeName: emp.fullName,
+      department: emp.department,
+      designation: emp.designation,
+      authorizedBy: `Administrator (${currentUser?.name || 'Saurabh Kumar'})`,
+      authorizedDate: new Date().toISOString().split('T')[0],
+      validUntil: validUntil || '2026-10-31',
+      status: 'Authorized',
+      reason: reason || 'Approved Remote Assignment',
+      idCardVerified: true,
+      notes: notes || 'Admin ID verified & authorized for remote shift attendance'
+    };
+
+    setWfhAuthorizedEmployees(prev => {
+      const rest = prev.filter(a => a.employeeId !== emp.id);
+      return [newAuth, ...rest];
+    });
+
+    logAudit(
+      'WFH ID Authorized',
+      'Administration',
+      `Admin authorized Employee ID "${emp.id}" (${emp.fullName}) for Work From Home. HR can now mark remote attendance.`
+    );
+
+    triggerNotification(
+      'WFH ID Authorized by Admin',
+      `Administrator has authorized ${emp.fullName} (${emp.id}) for Work From Home. HR can now mark remote attendance.`,
+      'attendance',
+      ['hr', 'owner', 'manager'],
+      '/hr/attendance'
+    );
+
+    addToast(`Employee ID "${emp.id}" (${emp.fullName}) successfully authorized for WFH by Admin!`, 'success');
+    return { success: true, record: newAuth };
+  };
+
+  const revokeEmployeeWFH = (empId) => {
+    const target = wfhAuthorizedEmployees.find(a => a.employeeId === empId);
+    setWfhAuthorizedEmployees(prev => prev.filter(a => a.employeeId !== empId));
+
+    logAudit(
+      'WFH ID Revoked',
+      'Administration',
+      `Admin revoked Work From Home authorization for Employee ID "${empId}" (${target?.employeeName || 'Staff'}).`
+    );
+
+    addToast(`WFH Authorization for ID "${empId}" has been revoked by Admin.`, 'info');
+  };
+
   const markWFHAttendance = ({
     employeeId,
     date = todayStr,
@@ -679,6 +792,20 @@ export const ERPProvider = ({ children }) => {
     if (!emp) {
       addToast(`Employee with ID or name "${employeeId}" not found.`, 'error');
       return { success: false, reason: 'EMPLOYEE_NOT_FOUND' };
+    }
+
+    // Verify Admin Authorization for this ID
+    const authRecord = getEmployeeWFHAuthInfo(emp.id);
+    if (!authRecord) {
+      addToast(
+        `Attendance Denied: Employee ID "${emp.id}" (${emp.fullName}) is not authorized for Work From Home by Admin. Admin must authorize this ID card first!`,
+        'error'
+      );
+      return {
+        success: false,
+        reason: 'NOT_AUTHORIZED_BY_ADMIN',
+        message: `Employee ID "${emp.id}" is not authorized for WFH by Administrator.`
+      };
     }
 
     const effectiveDate = date || todayStr;
@@ -697,13 +824,16 @@ export const ERPProvider = ({ children }) => {
       status: status || 'Present',
       isWFH: true,
       workMode: 'Work From Home',
+      adminAuthorized: true,
+      adminAuthId: authRecord.id,
+      adminAuthReason: authRecord.reason,
       networkVerified: true,
-      networkName: 'Work From Home (HR Authorized)',
+      networkName: 'Work From Home (Admin ID Authorized)',
       networkLocation: 'Remote · Home Office',
       networkIp: '192.168.1.1 (Remote VPN)',
       markedBy: `HR (${currentUser?.name || 'Sophia Montgomery'})`,
       markedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      notes: notes || 'WFH Approved & Marked by HR'
+      notes: notes || `WFH Approved by Admin (${authRecord.id}) & Marked by HR`
     };
 
     setAttendance(prev => {
@@ -714,18 +844,18 @@ export const ERPProvider = ({ children }) => {
     logAudit(
       'WFH Attendance Marked',
       'Attendance',
-      `HR (${currentUser?.name || 'Sophia Montgomery'}) marked Work From Home attendance for ${emp.fullName} (${emp.id}) on ${effectiveDate} as ${status}.`
+      `HR (${currentUser?.name || 'Sophia Montgomery'}) marked Work From Home attendance for Admin-authorized ID ${emp.id} (${emp.fullName}) on ${effectiveDate} as ${status}.`
     );
 
     triggerNotification(
       'Work From Home Attendance Marked',
-      `HR has marked your Work From Home (WFH) attendance for ${effectiveDate} as ${status}.`,
+      `HR has marked your Work From Home (WFH) attendance for ${effectiveDate} as ${status} (Admin Auth: ${authRecord.id}).`,
       'attendance',
       ['employee'],
       '/employee/attendance'
     );
 
-    addToast(`WFH Attendance for ${emp.fullName} (${emp.id}) marked as ${status}!`, 'success');
+    addToast(`WFH Attendance for ${emp.fullName} (${emp.id}) marked as ${status} (Admin ID Verified)!`, 'success');
     return { success: true, record: wfhRecord };
   };
 
@@ -926,6 +1056,11 @@ export const ERPProvider = ({ children }) => {
       resetEmployeeAttendance,
       getTodayAttendanceForUser,
       markWFHAttendance,
+      wfhAuthorizedEmployees,
+      authorizeEmployeeWFH,
+      revokeEmployeeWFH,
+      isEmployeeWFHAuthorized,
+      getEmployeeWFHAuthInfo,
 
       leaves,
       leaveBalances,

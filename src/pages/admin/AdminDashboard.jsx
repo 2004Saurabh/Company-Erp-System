@@ -55,6 +55,7 @@ import EmployeeModal from '../../components/modals/EmployeeModal';
 import ProjectModal from '../../components/modals/ProjectModal';
 import DepartmentModal from '../../components/modals/DepartmentModal';
 import TaskModal from '../../components/modals/TaskModal';
+import AdminWFHAuthorizationModal from '../../components/modals/AdminWFHAuthorizationModal';
 
 export const AdminDashboard = () => {
   const {
@@ -73,7 +74,8 @@ export const AdminDashboard = () => {
     companyWifis,
     toggleWifiAttendance,
     wifiEnforcementEnabled,
-    toggleWifiEnforcement
+    toggleWifiEnforcement,
+    wfhAuthorizedEmployees
   } = useERP();
 
   const { currentUser } = useAuth();
@@ -83,6 +85,7 @@ export const AdminDashboard = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isAdminWFHModalOpen, setIsAdminWFHModalOpen] = useState(false);
 
   // Computations
   const activeEmployees = (employees || []).filter(e => e.status === 'Active').length;
@@ -190,6 +193,15 @@ export const AdminDashboard = () => {
               onClick={() => setIsDeptModalOpen(true)}
             >
               New Dept
+            </Button>
+            <Button
+              variant="outline"
+              icon={ShieldCheck}
+              size="sm"
+              className="text-white border-rose-400/50 bg-rose-500/20 hover:bg-rose-500/30"
+              onClick={() => setIsAdminWFHModalOpen(true)}
+            >
+              Authorize WFH ID
             </Button>
           </div>
         </div>
@@ -649,6 +661,60 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Admin WFH ID Registry Management Control Card */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-900/60 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex items-start sm:items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shrink-0 mt-1 sm:mt-0">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-white">
+                Admin WFH Employee ID Authorization Registry
+              </h3>
+              <Badge variant="purple" size="xs">Admin Clearance Exclusive</Badge>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                {(wfhAuthorizedEmployees || []).length} Employee IDs Registered
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
+              HR is only permitted to record remote WFH attendance for Employee ID Cards that you (Administrator) have registered and approved below. Unregistered IDs will be blocked from remote attendance.
+            </p>
+            {/* Quick Preview of Authorized IDs */}
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Authorized IDs:</span>
+              {(wfhAuthorizedEmployees || []).slice(0, 5).map(auth => (
+                <span
+                  key={auth.employeeId}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono bg-slate-800/80 border border-slate-700 text-indigo-300"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <strong>{auth.employeeId}</strong>
+                  <span className="text-slate-400 font-sans text-[11px]">({auth.employeeName?.split(' ')[0]})</span>
+                </span>
+              ))}
+              {(wfhAuthorizedEmployees || []).length > 5 && (
+                <span className="text-xs text-slate-400">
+                  +{(wfhAuthorizedEmployees || []).length - 5} more
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ShieldCheck}
+            onClick={() => setIsAdminWFHModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 whitespace-nowrap"
+          >
+            Authorize / Revoke ID Cards
+          </Button>
+        </div>
+      </div>
+
       {/* Live Remote Workforce / WFH Personnel Widget */}
       <WFHPersonnelWidget
         title="Active Work From Home (WFH) Staff"
@@ -816,6 +882,10 @@ export const AdminDashboard = () => {
       <TaskModal
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
+      />
+      <AdminWFHAuthorizationModal
+        isOpen={isAdminWFHModalOpen}
+        onClose={() => setIsAdminWFHModalOpen(false)}
       />
     </div>
   );
