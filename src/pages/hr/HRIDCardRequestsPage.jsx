@@ -29,6 +29,7 @@ import Input from '../../components/Input';
 import Modal from '../../components/Modal';
 import EmployeeIDCard from '../../components/EmployeeIDCard';
 import StatCard from '../../components/StatCard';
+import AdminDirectIDCardModal from '../../components/modals/AdminDirectIDCardModal';
 
 export const HRIDCardRequestsPage = () => {
   const {
@@ -48,6 +49,7 @@ export const HRIDCardRequestsPage = () => {
   const [approvalNotes, setApprovalNotes] = useState('Official employee credentials verified and authorized by HR.');
   const [rejectingRequest, setRejectingRequest] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('Photo unclear or details need verification. Please update and reapply.');
+  const [isAdminDirectModalOpen, setIsAdminDirectModalOpen] = useState(false);
 
   // Counts
   const totalCount = (idCardRequests || []).length;
@@ -92,7 +94,7 @@ export const HRIDCardRequestsPage = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              <ShieldCheck className="w-3.5 h-3.5" /> HR Credential Issuing Authority
+              <ShieldCheck className="w-3.5 h-3.5" /> HR & Admin Credential Authority
             </span>
             <span className="text-xs text-slate-400">Identity & Access Control</span>
           </div>
@@ -104,10 +106,21 @@ export const HRIDCardRequestsPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           <span className="px-3.5 py-1.5 rounded-2xl bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
             {pendingCount} Pending Approvals
           </span>
+          {(role === 'admin' || role === 'owner') && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Sparkles}
+              onClick={() => setIsAdminDirectModalOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 font-bold shadow-lg shadow-indigo-600/30 whitespace-nowrap"
+            >
+              Direct Issue ID Card (Admin)
+            </Button>
+          )}
         </div>
       </div>
 
@@ -471,6 +484,12 @@ export const HRIDCardRequestsPage = () => {
           </div>
         </Modal>
       )}
+
+      {/* Modal 4: Direct Admin ID Card Generation */}
+      <AdminDirectIDCardModal
+        isOpen={isAdminDirectModalOpen}
+        onClose={() => setIsAdminDirectModalOpen(false)}
+      />
     </div>
   );
 };

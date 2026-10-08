@@ -26,7 +26,8 @@ import {
   Wifi,
   WifiOff,
   Radio,
-  Home
+  Home,
+  Contact
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -56,6 +57,7 @@ import ProjectModal from '../../components/modals/ProjectModal';
 import DepartmentModal from '../../components/modals/DepartmentModal';
 import TaskModal from '../../components/modals/TaskModal';
 import AdminWFHAuthorizationModal from '../../components/modals/AdminWFHAuthorizationModal';
+import AdminDirectIDCardModal from '../../components/modals/AdminDirectIDCardModal';
 
 export const AdminDashboard = () => {
   const {
@@ -75,7 +77,8 @@ export const AdminDashboard = () => {
     toggleWifiAttendance,
     wifiEnforcementEnabled,
     toggleWifiEnforcement,
-    wfhAuthorizedEmployees
+    wfhAuthorizedEmployees,
+    idCardRequests
   } = useERP();
 
   const { currentUser } = useAuth();
@@ -86,6 +89,7 @@ export const AdminDashboard = () => {
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isAdminWFHModalOpen, setIsAdminWFHModalOpen] = useState(false);
+  const [isAdminDirectIDModalOpen, setIsAdminDirectIDModalOpen] = useState(false);
 
   // Computations
   const activeEmployees = (employees || []).filter(e => e.status === 'Active').length;
@@ -202,6 +206,15 @@ export const AdminDashboard = () => {
               onClick={() => setIsAdminWFHModalOpen(true)}
             >
               Authorize WFH ID
+            </Button>
+            <Button
+              variant="outline"
+              icon={Contact}
+              size="sm"
+              className="text-white border-indigo-400/50 bg-indigo-500/20 hover:bg-indigo-500/30"
+              onClick={() => setIsAdminDirectIDModalOpen(true)}
+            >
+              Issue ID Card
             </Button>
           </div>
         </div>
@@ -715,6 +728,55 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Enterprise Digital ID Card Issuance & Security Authority Console */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 border border-purple-900/60 text-white shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex items-start sm:items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-400 shrink-0 mt-1 sm:mt-0">
+            <Contact className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-white">
+                Enterprise ID Card Issuance & Root Credential Authority
+              </h3>
+              <Badge variant="purple" size="xs">Root Access</Badge>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                {(idCardRequests || []).filter(r => r.status === 'Approved').length} Active Badges
+              </span>
+              {(idCardRequests || []).filter(r => r.status === 'Pending').length > 0 && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                  {(idCardRequests || []).filter(r => r.status === 'Pending').length} Pending Review
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
+              Super Administrator can directly issue approved corporate ID cards for any employee across Executive, Engineering, HR, and Operations teams. Instantly allocates serial numbers, sets RFID clearance, and generates secure turnstile QR codes.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Eye}
+            onClick={() => navigate('/admin/id-cards')}
+            className="text-white border-white/20 hover:bg-white/10 whitespace-nowrap"
+          >
+            Review All Badges
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Contact}
+            onClick={() => setIsAdminDirectIDModalOpen(true)}
+            className="bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-600/30 whitespace-nowrap"
+          >
+            Direct Issue ID Card
+          </Button>
+        </div>
+      </div>
+
       {/* Live Remote Workforce / WFH Personnel Widget */}
       <WFHPersonnelWidget
         title="Active Work From Home (WFH) Staff"
@@ -886,6 +948,10 @@ export const AdminDashboard = () => {
       <AdminWFHAuthorizationModal
         isOpen={isAdminWFHModalOpen}
         onClose={() => setIsAdminWFHModalOpen(false)}
+      />
+      <AdminDirectIDCardModal
+        isOpen={isAdminDirectIDModalOpen}
+        onClose={() => setIsAdminDirectIDModalOpen(false)}
       />
     </div>
   );

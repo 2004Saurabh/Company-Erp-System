@@ -11,7 +11,8 @@ import {
   Award,
   CheckCircle2,
   AlertCircle,
-  Home
+  Home,
+  Contact
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -128,6 +129,15 @@ export const ManagerDashboard = () => {
             onClick={() => navigate('/manager/leave')}
           >
             Review Leaves
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Contact}
+            className="text-white border-white/20 hover:bg-white/10"
+            onClick={() => navigate('/manager/id-cards')}
+          >
+            Team ID Cards
           </Button>
           <Button
             variant="primary"

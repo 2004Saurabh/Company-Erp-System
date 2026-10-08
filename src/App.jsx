@@ -48,6 +48,7 @@ import ManagerTeam from './pages/manager/ManagerTeam';
 import ManagerTasks from './pages/manager/ManagerTasks';
 import ManagerAnalytics from './pages/manager/ManagerAnalytics';
 import ManagerCalendar from './pages/manager/ManagerCalendar';
+import ManagerTeamIDCardsPage from './pages/manager/ManagerTeamIDCardsPage';
 
 // Employee Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -205,6 +206,7 @@ export const App = () => {
           <Route path="leave" element={<OwnerLeave />} />
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="calendar" element={<ManagerCalendar />} />
+          <Route path="id-cards" element={<ManagerTeamIDCardsPage />} />
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="reports" element={<OwnerReports />} />
           <Route path="profile" element={<OwnerProfile />} />

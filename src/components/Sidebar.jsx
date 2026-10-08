@@ -120,6 +120,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Leave Requests', path: '/manager/leave', icon: CalendarDays },
           { name: 'Performance', path: '/manager/performance', icon: Award },
           { name: 'Team Calendar', path: '/manager/calendar', icon: Calendar },
+          { name: 'Team ID Cards', path: '/manager/id-cards', icon: Contact },
           { name: 'Announcements', path: '/manager/announcements', icon: Megaphone },
           { name: 'Reports', path: '/manager/reports', icon: BarChart3 },
           { name: 'Profile', path: '/manager/profile', icon: User },

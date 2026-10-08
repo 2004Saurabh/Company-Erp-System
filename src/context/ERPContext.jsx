@@ -1010,6 +1010,71 @@ export const ERPProvider = ({ children }) => {
     return { success: true, request: updated };
   };
 
+  const adminGenerateIDCard = ({
+    employeeId,
+    bloodGroup = 'O+',
+    emergencyContact = '',
+    badgeNumber = null,
+    validUntil = '2028-10-08',
+    cardType = 'Corporate Staff Badge',
+    notes = 'Official Root Administrator Direct Credential Issuance',
+    customPhoto = null
+  }) => {
+    const emp = employees.find(e => e.id === employeeId || e.email === employeeId);
+    if (!emp) {
+      addToast(`Employee record not found for "${employeeId}".`, 'error');
+      return { success: false, message: 'Employee not found' };
+    }
+
+    const assignedBadgeNum = badgeNumber || `NEX-ID-${Math.floor(10000 + Math.random() * 90000)}`;
+    const approverTitle = currentUser?.title || 'System Administrator';
+    const approverName = currentUser?.name ? `${currentUser.name} (${approverTitle})` : 'Administrator (Saurabh Kumar)';
+
+    const newApprovedCard = {
+      id: `REQ-ID-${Date.now().toString().slice(-4)}`,
+      employeeId: emp.id,
+      employeeName: emp.fullName,
+      department: emp.department,
+      designation: emp.designation,
+      avatar: customPhoto || emp.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      bloodGroup: bloodGroup || emp.bloodGroup || 'O+',
+      emergencyContact: emergencyContact || emp.emergencyContact || '+1 (555) 999-1122',
+      requestDate: todayStr,
+      reason: 'Root Administrator Direct Credential Issuance',
+      cardType: cardType || 'Corporate Staff Badge',
+      status: 'Approved',
+      badgeNumber: assignedBadgeNum,
+      issuedDate: todayStr,
+      validUntil: validUntil || '2028-10-08',
+      approvedBy: approverName,
+      approvalDate: todayStr,
+      notes: notes || 'Direct Administrator security clearance and immediate badge authorization.',
+      qrCodeData: `NEXORA-ADMIN-VERIFIED-${emp.id}-SECURE-${assignedBadgeNum}`
+    };
+
+    setIdCardRequests(prev => {
+      const rest = prev.filter(r => r.employeeId !== emp.id);
+      return [newApprovedCard, ...rest];
+    });
+
+    logAudit(
+      'Admin ID Card Issued',
+      'ID Card Operations',
+      `Administrator directly issued official ID card badge ${assignedBadgeNum} for ${emp.fullName} (${emp.id}).`
+    );
+
+    triggerNotification(
+      'Official ID Badge Issued by Administrator 🛡️',
+      `Administrator has directly issued and approved your official digital employee badge (Serial: ${assignedBadgeNum}).`,
+      'id_card',
+      ['employee'],
+      '/employee/id-card'
+    );
+
+    addToast(`Official ID Card directly issued for ${emp.fullName} (${emp.id}) with Badge ${assignedBadgeNum}!`, 'success');
+    return { success: true, card: newApprovedCard };
+  };
+
   // =================== LEAVES ===================
   const applyLeave = (leaveData) => {
     const newId = `LEV-${500 + leaves.length + 1}`;
@@ -1219,6 +1284,7 @@ export const ERPProvider = ({ children }) => {
       approveIDCardRequest,
       rejectIDCardRequest,
       getEmployeeIDCard,
+      adminGenerateIDCard,
 
       leaves,
       leaveBalances,
