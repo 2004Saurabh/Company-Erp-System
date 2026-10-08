@@ -20,7 +20,8 @@ import {
   RotateCcw,
   LogIn,
   LogOut,
-  Home
+  Home,
+  Contact
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
@@ -256,6 +257,16 @@ export const EmployeeDashboard = () => {
             }}
           >
             View Payslip
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Contact}
+            className="text-white border-white/20 hover:bg-white/10"
+            onClick={() => navigate('/employee/id-card')}
+          >
+            Digital ID Card
           </Button>
         </div>
       </div>

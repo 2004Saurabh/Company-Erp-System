@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Mail, Phone, Building, Briefcase, Calendar, Save, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Phone, Building, Briefcase, Calendar, Save, Shield, Contact } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Button from '../../components/Button';
@@ -10,6 +11,7 @@ import Badge from '../../components/Badge';
 export const EmployeeProfile = () => {
   const { currentUser, updateProfile } = useAuth();
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: currentUser?.name || 'Elena Rostova',
@@ -50,6 +52,16 @@ export const EmployeeProfile = () => {
           </div>
           <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">{formData.title}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{formData.department} · {formData.location}</p>
+        </div>
+        <div className="shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Contact}
+            onClick={() => navigate('/employee/id-card')}
+          >
+            Digital ID Card
+          </Button>
         </div>
       </div>
 

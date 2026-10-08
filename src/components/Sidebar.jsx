@@ -25,7 +25,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Layers
+  Layers,
+  Contact
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -61,6 +62,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Performance', path: '/admin/performance', icon: Award },
           { name: 'Training', path: '/admin/training', icon: GraduationCap },
           { name: 'Documents', path: '/admin/documents', icon: FileText },
+          { name: 'ID Card Management', path: '/admin/id-cards', icon: Contact },
           { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
           { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldCheck },
@@ -102,6 +104,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Performance', path: '/hr/performance', icon: Award },
           { name: 'Training', path: '/hr/training', icon: GraduationCap },
           { name: 'Documents', path: '/hr/documents', icon: FileText },
+          { name: 'ID Card Requests', path: '/hr/id-cards', icon: Contact },
           { name: 'Announcements', path: '/hr/announcements', icon: Megaphone },
           { name: 'Reports', path: '/hr/reports', icon: BarChart3 },
           { name: 'Profile', path: '/hr/profile', icon: User },
@@ -136,6 +139,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Announcements', path: '/employee/announcements', icon: Megaphone },
           { name: 'Company Calendar', path: '/employee/calendar', icon: Calendar },
           { name: 'My Documents', path: '/employee/documents', icon: FileText },
+          { name: 'Digital ID Card', path: '/employee/id-card', icon: Contact },
           { name: 'Profile', path: '/employee/profile', icon: User },
           { name: 'Settings', path: '/employee/settings', icon: Settings },
         ];

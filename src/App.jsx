@@ -40,6 +40,7 @@ import HRRecruitment from './pages/hr/HRRecruitment';
 import HROnboarding from './pages/hr/HROnboarding';
 import HRTraining from './pages/hr/HRTraining';
 import HRDocuments from './pages/hr/HRDocuments';
+import HRIDCardRequestsPage from './pages/hr/HRIDCardRequestsPage';
 
 // Manager Pages
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -63,6 +64,7 @@ import EmployeeCalendar from './pages/employee/EmployeeCalendar';
 import EmployeeDocuments from './pages/employee/EmployeeDocuments';
 import EmployeeProfile from './pages/employee/EmployeeProfile';
 import EmployeeSettings from './pages/employee/EmployeeSettings';
+import EmployeeIDCardPage from './pages/employee/EmployeeIDCardPage';
 
 export const App = () => {
   const { isAuthenticated, role } = useAuth();
@@ -118,6 +120,7 @@ export const App = () => {
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="training" element={<HRTraining />} />
           <Route path="documents" element={<HRDocuments />} />
+          <Route path="id-cards" element={<HRIDCardRequestsPage />} />
           <Route path="reports" element={<OwnerReports />} />
           <Route path="announcements" element={<OwnerAnnouncements />} />
           <Route path="audit-logs" element={<OwnerAuditLogs />} />
@@ -177,6 +180,7 @@ export const App = () => {
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="training" element={<HRTraining />} />
           <Route path="documents" element={<HRDocuments />} />
+          <Route path="id-cards" element={<HRIDCardRequestsPage />} />
           <Route path="announcements" element={<OwnerAnnouncements />} />
           <Route path="reports" element={<OwnerReports />} />
           <Route path="profile" element={<OwnerProfile />} />
@@ -228,6 +232,7 @@ export const App = () => {
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="calendar" element={<EmployeeCalendar />} />
           <Route path="documents" element={<EmployeeDocuments />} />
+          <Route path="id-card" element={<EmployeeIDCardPage />} />
           <Route path="profile" element={<EmployeeProfile />} />
           <Route path="settings" element={<EmployeeSettings />} />
         </Route>

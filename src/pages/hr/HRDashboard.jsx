@@ -12,7 +12,8 @@ import {
   ArrowRight,
   TrendingUp,
   Award,
-  Home
+  Home,
+  Contact
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -42,7 +43,7 @@ import EmployeeModal from '../../components/modals/EmployeeModal';
 import MarkWFHAttendanceModal from '../../components/modals/MarkWFHAttendanceModal';
 
 export const HRDashboard = () => {
-  const { employees, attendance, leaves, jobOpenings, candidates, departments } = useERP();
+  const { employees, attendance, leaves, jobOpenings, candidates, departments, idCardRequests } = useERP();
   const navigate = useNavigate();
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
@@ -60,6 +61,7 @@ export const HRDashboard = () => {
 
   const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
   const activeJobs = jobOpenings.filter(j => j.status === 'Open').length;
+  const pendingIDCardCount = (idCardRequests || []).filter(r => r.status === 'Pending').length;
 
   // HR Charts
   const growthData = [
@@ -155,6 +157,20 @@ export const HRDashboard = () => {
             onClick={() => navigate('/hr/attendance')}
           >
             View Attendance
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Contact}
+            onClick={() => navigate('/hr/id-cards')}
+            className={pendingIDCardCount > 0 ? "border-indigo-400/50 bg-indigo-50/50 dark:bg-indigo-950/40 font-semibold" : ""}
+          >
+            ID Card Requests
+            {pendingIDCardCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                {pendingIDCardCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>

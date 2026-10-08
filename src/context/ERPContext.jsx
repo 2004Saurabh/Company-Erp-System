@@ -12,6 +12,7 @@ import { INITIAL_JOB_OPENINGS, INITIAL_CANDIDATES } from '../data/recruitment';
 import { INITIAL_PERFORMANCE } from '../data/performance';
 import { INITIAL_AUDIT_LOGS } from '../data/auditLogs';
 import { INITIAL_COMPANY_WIFIS, AVAILABLE_SIMULATION_NETWORKS } from '../data/wifiNetworks';
+import { INITIAL_ID_CARD_REQUESTS } from '../data/idCards';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 
@@ -180,6 +181,7 @@ export const ERPProvider = ({ children }) => {
   const [currentNetwork, setCurrentNetwork] = useState(() => loadState('current_network', AVAILABLE_SIMULATION_NETWORKS[0]));
   const [wifiEnforcementEnabled, setWifiEnforcementEnabled] = useState(() => loadState('wifi_enforcement', true));
   const [wfhAuthorizedEmployees, setWfhAuthorizedEmployees] = useState(() => loadState('wfh_authorized', INITIAL_WFH_AUTHORIZED));
+  const [idCardRequests, setIdCardRequests] = useState(() => loadState('id_card_requests', INITIAL_ID_CARD_REQUESTS));
 
   // Sync to localStorage
   useEffect(() => { localStorage.setItem('nexora_employees', JSON.stringify(employees)); }, [employees]);
@@ -200,6 +202,7 @@ export const ERPProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('nexora_current_network', JSON.stringify(currentNetwork)); }, [currentNetwork]);
   useEffect(() => { localStorage.setItem('nexora_wifi_enforcement', JSON.stringify(wifiEnforcementEnabled)); }, [wifiEnforcementEnabled]);
   useEffect(() => { localStorage.setItem('nexora_wfh_authorized', JSON.stringify(wfhAuthorizedEmployees)); }, [wfhAuthorizedEmployees]);
+  useEffect(() => { localStorage.setItem('nexora_id_card_requests', JSON.stringify(idCardRequests)); }, [idCardRequests]);
 
   // Log Action Helper
   const logAudit = (action, module, details) => {
@@ -859,6 +862,154 @@ export const ERPProvider = ({ children }) => {
     return { success: true, record: wfhRecord };
   };
 
+  // =================== DIGITAL ID CARD GENERATION & HR APPROVAL ===================
+  const getEmployeeIDCard = (empId) => {
+    if (!empId) return null;
+    return idCardRequests.find(r => r.employeeId === empId) || null;
+  };
+
+  const requestIDCard = ({
+    employeeId,
+    bloodGroup = 'O+',
+    emergencyContact = '',
+    reason = 'Initial Employee Digital ID Card Generation',
+    cardType = 'Corporate Staff Badge',
+    customPhoto = null
+  }) => {
+    const emp = employees.find(e => e.id === employeeId || e.email === employeeId);
+    if (!emp) {
+      addToast(`Employee record not found for ID "${employeeId}".`, 'error');
+      return { success: false, message: 'Employee not found' };
+    }
+
+    const existing = idCardRequests.find(r => r.employeeId === emp.id);
+    const newReqId = existing?.id || `REQ-ID-${Date.now().toString().slice(-4)}`;
+
+    const newRequest = {
+      id: newReqId,
+      employeeId: emp.id,
+      employeeName: emp.fullName,
+      department: emp.department,
+      designation: emp.designation,
+      avatar: customPhoto || emp.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      bloodGroup: bloodGroup || emp.bloodGroup || 'O+',
+      emergencyContact: emergencyContact || emp.emergencyContact || '+1 (555) 000-0000',
+      requestDate: todayStr,
+      reason: reason || 'Initial Employee Digital ID Card Generation',
+      cardType: cardType || 'Corporate Staff Badge',
+      status: 'Pending',
+      badgeNumber: existing?.status === 'Approved' ? existing.badgeNumber : null,
+      issuedDate: null,
+      validUntil: null,
+      approvedBy: null,
+      notes: 'Awaiting HR verification and digital badge authorization.',
+      qrCodeData: `NEXORA-PENDING-${emp.id}-${newReqId}`
+    };
+
+    setIdCardRequests(prev => {
+      const rest = prev.filter(r => r.employeeId !== emp.id);
+      return [newRequest, ...rest];
+    });
+
+    logAudit(
+      'ID Card Requested',
+      'ID Card Operations',
+      `${emp.fullName} (${emp.id}) submitted request for digital ID card generation (${cardType}).`
+    );
+
+    triggerNotification(
+      'New ID Card Generation Request',
+      `${emp.fullName} (${emp.id}) requested digital ID card generation. Awaiting HR review.`,
+      'id_card',
+      ['hr', 'admin', 'owner'],
+      '/hr/id-cards'
+    );
+
+    addToast(`ID Card generation request submitted for ${emp.fullName}! Awaiting HR approval.`, 'success');
+    return { success: true, request: newRequest };
+  };
+
+  const approveIDCardRequest = (requestId, approvalNotes = '') => {
+    const target = idCardRequests.find(r => r.id === requestId);
+    if (!target) {
+      addToast('ID Card request not found.', 'error');
+      return { success: false };
+    }
+
+    const badgeNum = target.badgeNumber || `NEX-ID-${Math.floor(10000 + Math.random() * 90000)}`;
+    const approverName = currentUser?.name ? `${currentUser.name} (${currentUser.title || 'HR Operations'})` : 'Sophia Montgomery (VP of HR)';
+
+    const updated = {
+      ...target,
+      status: 'Approved',
+      badgeNumber: badgeNum,
+      issuedDate: todayStr,
+      validUntil: '2028-10-08',
+      approvedBy: approverName,
+      approvalDate: todayStr,
+      notes: approvalNotes || 'Official ID credentials verified and authorized by HR Operations.',
+      qrCodeData: `NEXORA-VERIFIED-${target.employeeId}-SECURE-${badgeNum}`
+    };
+
+    setIdCardRequests(prev => prev.map(r => r.id === requestId ? updated : r));
+
+    logAudit(
+      'ID Card Approved',
+      'ID Card Operations',
+      `HR approved ID card request for ${target.employeeName} (${target.employeeId}). Badge ${badgeNum} issued.`
+    );
+
+    triggerNotification(
+      'ID Card Approved & Issued! 🎉',
+      `Your official digital employee ID card has been approved by HR! Badge Number: ${badgeNum}.`,
+      'id_card',
+      ['employee'],
+      '/employee/id-card'
+    );
+
+    addToast(`ID Card request for ${target.employeeName} approved! Badge ${badgeNum} issued.`, 'success');
+    return { success: true, request: updated };
+  };
+
+  const rejectIDCardRequest = (requestId, rejectionReason = '') => {
+    const target = idCardRequests.find(r => r.id === requestId);
+    if (!target) {
+      addToast('ID Card request not found.', 'error');
+      return { success: false };
+    }
+
+    const reasonText = rejectionReason || 'Information mismatch or unclear photo. Please verify details and reapply.';
+    const reviewerName = currentUser?.name || 'HR Operations';
+
+    const updated = {
+      ...target,
+      status: 'Rejected',
+      rejectedBy: reviewerName,
+      rejectionDate: todayStr,
+      rejectionReason: reasonText,
+      notes: reasonText
+    };
+
+    setIdCardRequests(prev => prev.map(r => r.id === requestId ? updated : r));
+
+    logAudit(
+      'ID Card Rejected',
+      'ID Card Operations',
+      `HR declined ID card request for ${target.employeeName} (${target.employeeId}): ${reasonText}`
+    );
+
+    triggerNotification(
+      'ID Card Request Declined',
+      `Your ID card generation request was declined by HR: "${reasonText}". Please review and reapply.`,
+      'id_card',
+      ['employee'],
+      '/employee/id-card'
+    );
+
+    addToast(`ID Card request for ${target.employeeName} declined.`, 'info');
+    return { success: true, request: updated };
+  };
+
   // =================== LEAVES ===================
   const applyLeave = (leaveData) => {
     const newId = `LEV-${500 + leaves.length + 1}`;
@@ -1061,6 +1212,13 @@ export const ERPProvider = ({ children }) => {
       revokeEmployeeWFH,
       isEmployeeWFHAuthorized,
       getEmployeeWFHAuthInfo,
+
+      // Digital ID Card Generation & HR Verification
+      idCardRequests,
+      requestIDCard,
+      approveIDCardRequest,
+      rejectIDCardRequest,
+      getEmployeeIDCard,
 
       leaves,
       leaveBalances,
