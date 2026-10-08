@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Power, Eye, Filter, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Power, Eye, Filter, Download, Home } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import DataTable from '../../components/DataTable';
 import Button from '../../components/Button';
@@ -8,6 +8,7 @@ import Avatar from '../../components/Avatar';
 import EmployeeModal from '../../components/modals/EmployeeModal';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { MarkWFHAttendanceModal } from '../../components/modals/MarkWFHAttendanceModal';
 import { useToast } from '../../context/ToastContext';
 
 export const OwnerEmployees = () => {
@@ -18,6 +19,8 @@ export const OwnerEmployees = () => {
   const [employeeToEdit, setEmployeeToEdit] = useState(null);
   const [employeeToView, setEmployeeToView] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isWFHModalOpen, setIsWFHModalOpen] = useState(false);
+  const [selectedEmpForWFH, setSelectedEmpForWFH] = useState(null);
 
   // Filters
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -88,7 +91,7 @@ export const OwnerEmployees = () => {
       header: 'Compensation',
       accessor: 'salary',
       sortable: true,
-      render: (val) => <span className="font-semibold text-slate-900 dark:text-white">${Number(val || 0).toLocaleString()}/yr</span>
+      render: (val) => <span className="font-semibold text-slate-900 dark:text-white">₹{Number(val || 0).toLocaleString()}/yr</span>
     },
     {
       header: 'Status',
@@ -120,6 +123,18 @@ export const OwnerEmployees = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Home}
+            onClick={() => {
+              setSelectedEmpForWFH(null);
+              setIsWFHModalOpen(true);
+            }}
+            className="border-indigo-400 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+          >
+            Mark WFH Attendance
+          </Button>
           <Button variant="outline" size="sm" icon={Download} onClick={handleExportCSV}>
             Export CSV
           </Button>
@@ -177,6 +192,16 @@ export const OwnerEmployees = () => {
               title="View Profile Details"
             >
               <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                setSelectedEmpForWFH(row.id);
+                setIsWFHModalOpen(true);
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors"
+              title="Mark Work From Home (WFH)"
+            >
+              <Home className="w-4 h-4" />
             </button>
             <button
               onClick={() => {
@@ -312,6 +337,16 @@ export const OwnerEmployees = () => {
             setEmployeeToDelete(null);
           }
         }}
+      />
+
+      {/* Mark WFH Attendance Modal */}
+      <MarkWFHAttendanceModal
+        isOpen={isWFHModalOpen}
+        onClose={() => {
+          setIsWFHModalOpen(false);
+          setSelectedEmpForWFH(null);
+        }}
+        initialEmployeeId={selectedEmpForWFH}
       />
     </div>
   );

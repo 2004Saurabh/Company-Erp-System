@@ -40,8 +40,16 @@ export const AttendanceStatusModal = ({
   let statusTitle = 'Attendance Not Marked Yet';
   let statusDesc = 'You have not marked attendance for today yet. Please clock in to record your presence.';
 
-  if (isCheckedIn) {
-    if (todayRecord?.status === 'Late') {
+  const isWFH = Boolean(todayRecord?.isWFH || todayRecord?.workMode === 'Work From Home');
+
+  if (isCheckedIn || isWFH) {
+    if (isWFH) {
+      status = 'Present';
+      statusColor = 'indigo';
+      statusBadge = 'PRESENT (WORK FROM HOME · HR VERIFIED)';
+      statusTitle = 'Work From Home Attendance Verified';
+      statusDesc = 'Your remote shift has been officially authorized and logged by HR using your Employee ID. Office WiFi geofence restriction bypassed.';
+    } else if (todayRecord?.status === 'Late') {
       status = 'Late';
       statusColor = 'amber';
       statusBadge = 'LATE PRESENT';
@@ -202,17 +210,20 @@ export const AttendanceStatusModal = ({
                 </span>
               </div>
 
-              {/* WiFi Verification */}
+              {/* WiFi or Remote Verification */}
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1">
-                  <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-                  Office WiFi Status
+                  {isWFH ? <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> : <Wifi className="w-3.5 h-3.5 text-emerald-500" />}
+                  {isWFH ? 'Work Mode & Auth' : 'Office WiFi Status'}
                 </div>
                 <div className="text-sm font-bold text-slate-900 dark:text-white font-mono truncate">
-                  {networkName}
+                  {isWFH ? (todayRecord?.networkName || 'Work From Home (HR)') : networkName}
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
-                  <ShieldCheck className="w-3 h-3" /> Office Geofence Verified
+                <span className={`inline-flex items-center gap-1 text-[10px] mt-0.5 font-semibold ${
+                  isWFH ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  <ShieldCheck className="w-3 h-3" />
+                  {isWFH ? 'HR Remote ID Authorized' : 'Office Geofence Verified'}
                 </span>
               </div>
             </div>

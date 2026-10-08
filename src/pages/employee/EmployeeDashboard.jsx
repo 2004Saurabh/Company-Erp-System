@@ -19,7 +19,8 @@ import {
   UserCheck,
   RotateCcw,
   LogIn,
-  LogOut
+  LogOut,
+  Home
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
@@ -73,6 +74,7 @@ export const EmployeeDashboard = () => {
 
   const isCheckedIn = Boolean(todayRecord && todayRecord.checkIn);
   const isCheckedOut = Boolean(todayRecord && todayRecord.checkOut);
+  const isWFH = Boolean(todayRecord?.isWFH || todayRecord?.workMode === 'Work From Home');
 
   // Live timer for current working duration
   const [liveHours, setLiveHours] = useState(todayRecord?.workHours || 4.2);
@@ -93,7 +95,9 @@ export const EmployeeDashboard = () => {
   const handleOpenStatusModal = () => {
     setIsStatusModalOpen(true);
     if (isCheckedIn) {
-      if (todayRecord?.status === 'Late') {
+      if (isWFH) {
+        addToast(`Attendance Status: Marked PRESENT (Work From Home · HR Verified at ${todayRecord?.checkIn || '09:00 AM'})`, 'success');
+      } else if (todayRecord?.status === 'Late') {
         addToast(`Attendance Status: Marked LATE today (Clocked in at ${todayRecord?.checkIn || '08:58 AM'})`, 'warning');
       } else {
         addToast(`Attendance Status: Marked PRESENT today (Clocked in at ${todayRecord?.checkIn || '08:58 AM'})`, 'success');
@@ -140,13 +144,19 @@ export const EmployeeDashboard = () => {
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/30 border border-indigo-400/40 text-[11px] font-bold tracking-wider uppercase text-indigo-300">
               Employee Self-Service Portal
             </span>
-            <span className="text-xs text-slate-400">Personal Workspace</span>
+            {isWFH ? (
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 text-[11px] font-bold tracking-wider uppercase text-emerald-300 flex items-center gap-1">
+                <Home className="w-3 h-3" /> WFH: HR Verified
+              </span>
+            ) : (
+              <span className="text-xs text-slate-400">Personal Workspace</span>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5">
             Good day, {currentUser?.name || 'Elena Rostova'}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
-            Senior Frontend Engineer · Engineering Team · Austin HQ / Remote
+            Senior Frontend Engineer · Engineering Team · {isWFH ? 'Work From Home (HR Authorized)' : 'Austin HQ / Remote'}
           </p>
         </div>
 
@@ -159,7 +169,7 @@ export const EmployeeDashboard = () => {
           <Button
             variant={!isCheckedIn ? (isCurrentWifiAuthorized() ? 'success' : 'secondary') : 'outline'}
             size="sm"
-            icon={!isCheckedIn && !isCurrentWifiAuthorized() ? WifiOff : LogIn}
+            icon={!isCheckedIn && !isCurrentWifiAuthorized() ? WifiOff : (isWFH ? Home : LogIn)}
             onClick={handleCheckIn}
             disabled={isCheckedIn}
             className={
@@ -167,11 +177,15 @@ export const EmployeeDashboard = () => {
                 ? isCurrentWifiAuthorized()
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/30'
                   : 'border-rose-400/60 text-rose-300'
-                : 'text-emerald-400 border-emerald-500/40 opacity-90 cursor-default bg-emerald-950/20'
+                : isWFH
+                  ? 'text-indigo-300 border-indigo-500/50 opacity-95 cursor-default bg-indigo-950/50 ring-1 ring-indigo-400/30'
+                  : 'text-emerald-400 border-emerald-500/40 opacity-90 cursor-default bg-emerald-950/20'
             }
           >
             {isCheckedIn
-              ? `Checked In (${todayRecord?.checkIn || 'Logged'})`
+              ? isWFH
+                ? `WFH Active (${todayRecord?.checkIn || '09:00 AM'})`
+                : `Checked In (${todayRecord?.checkIn || 'Logged'})`
               : isCurrentWifiAuthorized()
               ? 'Check In'
               : 'WiFi Locked · Check In'}

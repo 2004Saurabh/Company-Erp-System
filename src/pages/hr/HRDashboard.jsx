@@ -11,7 +11,8 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
-  Award
+  Award,
+  Home
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -37,12 +38,14 @@ import ChartCard from '../../components/ChartCard';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
 import EmployeeModal from '../../components/modals/EmployeeModal';
+import MarkWFHAttendanceModal from '../../components/modals/MarkWFHAttendanceModal';
 
 export const HRDashboard = () => {
   const { employees, attendance, leaves, jobOpenings, candidates, departments } = useERP();
   const navigate = useNavigate();
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isWFHModalOpen, setIsWFHModalOpen] = useState(false);
 
   // Stats
   const todayStr = '2026-10-01';
@@ -107,8 +110,17 @@ export const HRDashboard = () => {
           </p>
         </div>
 
-        {/* Quick Actions (Section 42 requirement) */}
+        {/* Quick Actions */}
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Home}
+            onClick={() => setIsWFHModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30"
+          >
+            Mark WFH Attendance
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -134,7 +146,7 @@ export const HRDashboard = () => {
             Review Leaves
           </Button>
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             icon={Clock}
             onClick={() => navigate('/hr/attendance')}
@@ -325,6 +337,11 @@ export const HRDashboard = () => {
       <EmployeeModal
         isOpen={isEmployeeModalOpen}
         onClose={() => setIsEmployeeModalOpen(false)}
+      />
+
+      <MarkWFHAttendanceModal
+        isOpen={isWFHModalOpen}
+        onClose={() => setIsWFHModalOpen(false)}
       />
     </div>
   );

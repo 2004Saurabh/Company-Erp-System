@@ -13,7 +13,8 @@ import {
   UserCheck,
   LogIn,
   LogOut,
-  RotateCcw
+  RotateCcw,
+  Home
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +48,7 @@ export const EmployeeAttendance = () => {
   const todayRecord = attendance.find(a => (a.employeeId === empId || a.employeeId === 'EMP-1004') && a.date === todayStr);
   const isCheckedIn = Boolean(todayRecord && todayRecord.checkIn);
   const isCheckedOut = Boolean(todayRecord && todayRecord.checkOut);
+  const isWFH = Boolean(todayRecord?.isWFH || todayRecord?.workMode === 'Work From Home');
 
   // Live Real-Time Time
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -60,7 +62,9 @@ export const EmployeeAttendance = () => {
   const handleOpenStatusModal = () => {
     setIsStatusModalOpen(true);
     if (isCheckedIn) {
-      if (todayRecord?.status === 'Late') {
+      if (isWFH) {
+        addToast(`Attendance Status: Marked PRESENT (Work From Home · HR Verified at ${todayRecord?.checkIn || '09:00 AM'})`, 'success');
+      } else if (todayRecord?.status === 'Late') {
         addToast(`Attendance Status: Marked LATE today (Clocked in at ${todayRecord?.checkIn || '08:58 AM'})`, 'warning');
       } else {
         addToast(`Attendance Status: Marked PRESENT today (Clocked in at ${todayRecord?.checkIn || '08:58 AM'})`, 'success');
@@ -111,31 +115,54 @@ export const EmployeeAttendance = () => {
       render: (val) => <span className="font-bold">{val} hrs</span>
     },
     {
-      header: 'Network Verification',
+      header: 'Network / Verification',
       accessor: 'networkName',
       sortable: true,
-      render: (val, row) => (
-        <div className="flex items-center gap-1.5 text-xs">
-          <Wifi className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
-            {val || 'NEXORA-CORP-5G'}
-          </span>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800">
-            Office Verified
-          </span>
-        </div>
-      )
+      render: (val, row) => {
+        const rowWFH = row.isWFH || row.workMode === 'Work From Home';
+        if (rowWFH) {
+          return (
+            <div className="flex items-center gap-1.5 text-xs">
+              <Home className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                {val || 'Work From Home (HR Authorized)'}
+              </span>
+              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.2 rounded border border-indigo-200 dark:border-indigo-800 font-semibold">
+                HR Verified
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Wifi className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+              {val || 'NEXORA-CORP-5G'}
+            </span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800">
+              Office Verified
+            </span>
+          </div>
+        );
+      }
     },
     {
       header: 'Status',
       accessor: 'status',
       sortable: true,
-      render: (val) => {
+      render: (val, row) => {
+        const rowWFH = row.isWFH || row.workMode === 'Work From Home';
         let variant = 'success';
         if (val === 'Late') variant = 'warning';
         if (val === 'On Leave') variant = 'info';
         if (val === 'Absent') variant = 'danger';
-        return <Badge variant={variant} size="sm" dot>{val}</Badge>;
+        return (
+          <div className="flex items-center gap-1.5">
+            <Badge variant={rowWFH ? 'indigo' : variant} size="sm" dot>
+              {val} {rowWFH && '(WFH)'}
+            </Badge>
+          </div>
+        );
       }
     }
   ];
@@ -163,8 +190,12 @@ export const EmployeeAttendance = () => {
               Current Shift Terminal
             </span>
             <span className="text-slate-400">•</span>
-            <span className={`text-[11px] font-semibold flex items-center gap-1 ${isCurrentWifiAuthorized() ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isCurrentWifiAuthorized() ? (
+            <span className={`text-[11px] font-semibold flex items-center gap-1 ${isWFH ? 'text-indigo-400' : isCurrentWifiAuthorized() ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {isWFH ? (
+                <>
+                  <Home className="w-3.5 h-3.5" /> Work From Home Authorized by HR
+                </>
+              ) : isCurrentWifiAuthorized() ? (
                 <>
                   <ShieldCheck className="w-3.5 h-3.5" /> Office WiFi Verified ({currentNetwork?.ssid})
                 </>
@@ -190,7 +221,7 @@ export const EmployeeAttendance = () => {
               {todayRecord?.workHours || (isCheckedIn ? 4.2 : 0)} hrs
             </span>
             <span className="text-[10px] text-slate-300">
-              {isCheckedOut ? 'Shift Done' : isCheckedIn ? 'Timer Active' : 'Not Started'}
+              {isCheckedOut ? 'Shift Done' : isCheckedIn ? (isWFH ? 'WFH Active' : 'Timer Active') : 'Not Started'}
             </span>
           </div>
 
@@ -198,7 +229,7 @@ export const EmployeeAttendance = () => {
           <Button
             variant={!isCheckedIn ? (isCurrentWifiAuthorized() ? 'success' : 'secondary') : 'outline'}
             size="lg"
-            icon={!isCheckedIn && !isCurrentWifiAuthorized() ? WifiOff : LogIn}
+            icon={!isCheckedIn && !isCurrentWifiAuthorized() ? WifiOff : (isWFH ? Home : LogIn)}
             onClick={handleCheckIn}
             disabled={isCheckedIn}
             className={`shadow-lg min-w-[160px] ${
@@ -206,11 +237,15 @@ export const EmployeeAttendance = () => {
                 ? isCurrentWifiAuthorized()
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-emerald-600/30 ring-2 ring-emerald-400/30'
                   : 'bg-rose-600/90 hover:bg-rose-600 text-white border-rose-500'
-                : 'text-emerald-300 border-emerald-500/40 opacity-90 cursor-default bg-emerald-950/40'
+                : isWFH
+                  ? 'text-indigo-300 border-indigo-500/50 opacity-95 cursor-default bg-indigo-950/60 ring-1 ring-indigo-400/40'
+                  : 'text-emerald-300 border-emerald-500/40 opacity-90 cursor-default bg-emerald-950/40'
             }`}
           >
             {isCheckedIn
-              ? `Checked In (${todayRecord?.checkIn || '08:58 AM'})`
+              ? isWFH
+                ? `WFH Active (${todayRecord?.checkIn || '09:00 AM'})`
+                : `Checked In (${todayRecord?.checkIn || '08:58 AM'})`
               : isCurrentWifiAuthorized()
               ? 'Check In'
               : 'WiFi Locked · Check In'}

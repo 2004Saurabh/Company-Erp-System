@@ -657,6 +657,69 @@ export const ERPProvider = ({ children }) => {
     addToast('Attendance reset! Check In button is now available.', 'info');
   };
 
+  const markWFHAttendance = ({
+    employeeId,
+    date = todayStr,
+    checkIn = '09:00 AM',
+    checkOut = null,
+    status = 'Present',
+    workHours = 8.0,
+    notes = 'Authorized Work From Home'
+  }) => {
+    const emp = employees.find(e => e.id === employeeId || e.fullName.toLowerCase() === (employeeId || '').toLowerCase());
+    if (!emp) {
+      addToast(`Employee with ID or name "${employeeId}" not found.`, 'error');
+      return { success: false, reason: 'EMPLOYEE_NOT_FOUND' };
+    }
+
+    const effectiveDate = date || todayStr;
+    const existing = attendance.find(a => (a.employeeId === emp.id || a.employeeName === emp.fullName) && a.date === effectiveDate);
+    const calculatedHours = checkOut ? Number(workHours || 8.5) : (status === 'Late' ? 7.0 : 8.0);
+
+    const wfhRecord = {
+      id: existing?.id || `ATT-WFH-${Date.now().toString().slice(-4)}`,
+      employeeId: emp.id,
+      employeeName: emp.fullName,
+      department: emp.department,
+      date: effectiveDate,
+      checkIn: checkIn || '09:00 AM',
+      checkOut: checkOut || (status === 'Present' || status === 'Late' ? '05:30 PM' : null),
+      workHours: calculatedHours,
+      status: status || 'Present',
+      isWFH: true,
+      workMode: 'Work From Home',
+      networkVerified: true,
+      networkName: 'Work From Home (HR Authorized)',
+      networkLocation: 'Remote · Home Office',
+      networkIp: '192.168.1.1 (Remote VPN)',
+      markedBy: `HR (${currentUser?.name || 'Sophia Montgomery'})`,
+      markedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      notes: notes || 'WFH Approved & Marked by HR'
+    };
+
+    setAttendance(prev => {
+      const filtered = prev.filter(a => !( (a.employeeId === emp.id || a.employeeName === emp.fullName) && a.date === effectiveDate));
+      return [wfhRecord, ...filtered];
+    });
+
+    logAudit(
+      'WFH Attendance Marked',
+      'Attendance',
+      `HR (${currentUser?.name || 'Sophia Montgomery'}) marked Work From Home attendance for ${emp.fullName} (${emp.id}) on ${effectiveDate} as ${status}.`
+    );
+
+    triggerNotification(
+      'Work From Home Attendance Marked',
+      `HR has marked your Work From Home (WFH) attendance for ${effectiveDate} as ${status}.`,
+      'attendance',
+      ['employee'],
+      '/employee/attendance'
+    );
+
+    addToast(`WFH Attendance for ${emp.fullName} (${emp.id}) marked as ${status}!`, 'success');
+    return { success: true, record: wfhRecord };
+  };
+
   // =================== LEAVES ===================
   const applyLeave = (leaveData) => {
     const newId = `LEV-${500 + leaves.length + 1}`;
@@ -853,6 +916,7 @@ export const ERPProvider = ({ children }) => {
       checkOutEmployee,
       resetEmployeeAttendance,
       getTodayAttendanceForUser,
+      markWFHAttendance,
 
       leaves,
       leaveBalances,
