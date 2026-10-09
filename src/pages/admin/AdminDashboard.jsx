@@ -27,7 +27,8 @@ import {
   WifiOff,
   Radio,
   Home,
-  Contact
+  Contact,
+  Package
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -900,11 +901,12 @@ export const AdminDashboard = () => {
           As Super Admin, navigate directly into any management module with full CRUD write permissions:
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3">
           {[
             { label: 'Workforce Roster', path: '/admin/employees', icon: Users, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40' },
             { label: 'Projects Pipeline', path: '/admin/projects', icon: FolderKanban, color: 'text-sky-500 bg-sky-50 dark:bg-sky-950/40' },
             { label: 'Team Tasks Board', path: '/admin/tasks', icon: Briefcase, color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' },
+            { label: 'Inventory & Assets', path: '/admin/inventory', icon: Package, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40' },
             { label: 'Payroll & Salary', path: '/admin/payroll', icon: IndianRupee, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' },
             { label: 'Recruitment LMS', path: '/admin/recruitment', icon: UserCheck, color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/40' },
             { label: 'Security & Audit', path: '/admin/audit-logs', icon: ShieldCheck, color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/40' },

@@ -26,7 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  Contact
+  Contact,
+  Package
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -63,6 +64,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Training', path: '/admin/training', icon: GraduationCap },
           { name: 'Documents', path: '/admin/documents', icon: FileText },
           { name: 'ID Card Management', path: '/admin/id-cards', icon: Contact },
+          { name: 'Inventory & Assets', path: '/admin/inventory', icon: Package },
           { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
           { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldCheck },
@@ -82,6 +84,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Payroll', path: '/owner/payroll', icon: CreditCard },
           { name: 'Attendance', path: '/owner/attendance', icon: Clock },
           { name: 'Leave Management', path: '/owner/leave', icon: CalendarDays },
+          { name: 'Inventory & Assets', path: '/owner/inventory', icon: Package },
           { name: 'Performance', path: '/owner/performance', icon: Award },
           { name: 'Reports', path: '/owner/reports', icon: BarChart3 },
           { name: 'Announcements', path: '/owner/announcements', icon: Megaphone },
@@ -105,6 +108,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Training', path: '/hr/training', icon: GraduationCap },
           { name: 'Documents', path: '/hr/documents', icon: FileText },
           { name: 'ID Card Requests', path: '/hr/id-cards', icon: Contact },
+          { name: 'Inventory & Supplies', path: '/hr/inventory', icon: Package },
           { name: 'Announcements', path: '/hr/announcements', icon: Megaphone },
           { name: 'Reports', path: '/hr/reports', icon: BarChart3 },
           { name: 'Profile', path: '/hr/profile', icon: User },
@@ -121,6 +125,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Performance', path: '/manager/performance', icon: Award },
           { name: 'Team Calendar', path: '/manager/calendar', icon: Calendar },
           { name: 'Team ID Cards', path: '/manager/id-cards', icon: Contact },
+          { name: 'Inventory & Assets', path: '/manager/inventory', icon: Package },
           { name: 'Announcements', path: '/manager/announcements', icon: Megaphone },
           { name: 'Reports', path: '/manager/reports', icon: BarChart3 },
           { name: 'Profile', path: '/manager/profile', icon: User },
@@ -141,6 +146,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
           { name: 'Company Calendar', path: '/employee/calendar', icon: Calendar },
           { name: 'My Documents', path: '/employee/documents', icon: FileText },
           { name: 'Digital ID Card', path: '/employee/id-card', icon: Contact },
+          { name: 'Asset Catalog', path: '/employee/inventory', icon: Package },
           { name: 'Profile', path: '/employee/profile', icon: User },
           { name: 'Settings', path: '/employee/settings', icon: Settings },
         ];

@@ -67,6 +67,9 @@ import EmployeeProfile from './pages/employee/EmployeeProfile';
 import EmployeeSettings from './pages/employee/EmployeeSettings';
 import EmployeeIDCardPage from './pages/employee/EmployeeIDCardPage';
 
+// Inventory & Enterprise Asset Management
+import InventoryPage from './pages/inventory/InventoryPage';
+
 export const App = () => {
   const { isAuthenticated, role } = useAuth();
 
@@ -122,6 +125,7 @@ export const App = () => {
           <Route path="training" element={<HRTraining />} />
           <Route path="documents" element={<HRDocuments />} />
           <Route path="id-cards" element={<HRIDCardRequestsPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
           <Route path="reports" element={<OwnerReports />} />
           <Route path="announcements" element={<OwnerAnnouncements />} />
           <Route path="audit-logs" element={<OwnerAuditLogs />} />
@@ -150,6 +154,7 @@ export const App = () => {
           <Route path="payroll" element={<OwnerPayroll />} />
           <Route path="attendance" element={<OwnerAttendance />} />
           <Route path="leave" element={<OwnerLeave />} />
+          <Route path="inventory" element={<InventoryPage />} />
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="reports" element={<OwnerReports />} />
           <Route path="announcements" element={<OwnerAnnouncements />} />
@@ -178,6 +183,7 @@ export const App = () => {
           <Route path="recruitment" element={<HRRecruitment />} />
           <Route path="onboarding" element={<HROnboarding />} />
           <Route path="payroll" element={<OwnerPayroll />} />
+          <Route path="inventory" element={<InventoryPage />} />
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="training" element={<HRTraining />} />
           <Route path="documents" element={<HRDocuments />} />
@@ -204,6 +210,7 @@ export const App = () => {
           <Route path="projects" element={<OwnerProjects />} />
           <Route path="attendance" element={<OwnerAttendance />} />
           <Route path="leave" element={<OwnerLeave />} />
+          <Route path="inventory" element={<InventoryPage />} />
           <Route path="performance" element={<OwnerPerformance />} />
           <Route path="calendar" element={<ManagerCalendar />} />
           <Route path="id-cards" element={<ManagerTeamIDCardsPage />} />
@@ -228,6 +235,7 @@ export const App = () => {
           <Route path="projects" element={<EmployeeProjects />} />
           <Route path="attendance" element={<EmployeeAttendance />} />
           <Route path="leave" element={<EmployeeLeave />} />
+          <Route path="inventory" element={<InventoryPage />} />
           <Route path="payslips" element={<EmployeePayslips />} />
           <Route path="performance" element={<EmployeePerformance />} />
           <Route path="training" element={<EmployeeTraining />} />

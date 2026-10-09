@@ -14,7 +14,8 @@ import {
   FileText,
   BarChart3,
   CreditCard,
-  Home
+  Home,
+  Package
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -155,6 +156,14 @@ export const OwnerDashboard = () => {
             onClick={() => setIsProjectModalOpen(true)}
           >
             Create Project
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Package}
+            onClick={() => navigate('/owner/inventory')}
+          >
+            Inventory & Assets
           </Button>
           <Button
             variant="primary"

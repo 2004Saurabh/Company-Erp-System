@@ -13,6 +13,12 @@ import { INITIAL_PERFORMANCE } from '../data/performance';
 import { INITIAL_AUDIT_LOGS } from '../data/auditLogs';
 import { INITIAL_COMPANY_WIFIS, AVAILABLE_SIMULATION_NETWORKS } from '../data/wifiNetworks';
 import { INITIAL_ID_CARD_REQUESTS } from '../data/idCards';
+import {
+  INITIAL_INVENTORY_PRODUCTS,
+  INITIAL_INVENTORY_SUPPLIERS,
+  INITIAL_PURCHASE_ORDERS,
+  INITIAL_STOCK_MOVEMENTS
+} from '../data/inventory';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 
@@ -183,6 +189,12 @@ export const ERPProvider = ({ children }) => {
   const [wfhAuthorizedEmployees, setWfhAuthorizedEmployees] = useState(() => loadState('wfh_authorized', INITIAL_WFH_AUTHORIZED));
   const [idCardRequests, setIdCardRequests] = useState(() => loadState('id_card_requests', INITIAL_ID_CARD_REQUESTS));
 
+  // Inventory Management State
+  const [inventoryProducts, setInventoryProducts] = useState(() => loadState('inventory_products', INITIAL_INVENTORY_PRODUCTS));
+  const [inventorySuppliers, setInventorySuppliers] = useState(() => loadState('inventory_suppliers', INITIAL_INVENTORY_SUPPLIERS));
+  const [inventoryPurchaseOrders, setInventoryPurchaseOrders] = useState(() => loadState('inventory_pos', INITIAL_PURCHASE_ORDERS));
+  const [inventoryStockMovements, setInventoryStockMovements] = useState(() => loadState('inventory_movements', INITIAL_STOCK_MOVEMENTS));
+
   // Sync to localStorage
   useEffect(() => { localStorage.setItem('nexora_employees', JSON.stringify(employees)); }, [employees]);
   useEffect(() => { localStorage.setItem('nexora_departments', JSON.stringify(departments)); }, [departments]);
@@ -203,6 +215,10 @@ export const ERPProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('nexora_wifi_enforcement', JSON.stringify(wifiEnforcementEnabled)); }, [wifiEnforcementEnabled]);
   useEffect(() => { localStorage.setItem('nexora_wfh_authorized', JSON.stringify(wfhAuthorizedEmployees)); }, [wfhAuthorizedEmployees]);
   useEffect(() => { localStorage.setItem('nexora_id_card_requests', JSON.stringify(idCardRequests)); }, [idCardRequests]);
+  useEffect(() => { localStorage.setItem('nexora_inventory_products', JSON.stringify(inventoryProducts)); }, [inventoryProducts]);
+  useEffect(() => { localStorage.setItem('nexora_inventory_suppliers', JSON.stringify(inventorySuppliers)); }, [inventorySuppliers]);
+  useEffect(() => { localStorage.setItem('nexora_inventory_pos', JSON.stringify(inventoryPurchaseOrders)); }, [inventoryPurchaseOrders]);
+  useEffect(() => { localStorage.setItem('nexora_inventory_movements', JSON.stringify(inventoryStockMovements)); }, [inventoryStockMovements]);
 
   // Log Action Helper
   const logAudit = (action, module, details) => {
@@ -1235,6 +1251,320 @@ export const ERPProvider = ({ children }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  // =================== INVENTORY MANAGEMENT ===================
+  const calculateProductStatus = (qty, threshold) => {
+    const q = Number(qty) || 0;
+    const t = Number(threshold) || 10;
+    if (q <= 0) return 'Out of Stock';
+    if (q <= t) return 'Low Stock';
+    return 'In Stock';
+  };
+
+  const addInventoryProduct = (productData) => {
+    const newId = `PRD-${Date.now().toString().slice(-4)}`;
+    const sku = productData.sku || `SKU-${Date.now().toString().slice(-4)}`;
+    const quantity = Number(productData.quantity) || 0;
+    const minThreshold = Number(productData.minThreshold) || 10;
+    const status = calculateProductStatus(quantity, minThreshold);
+
+    const newProduct = {
+      id: newId,
+      sku,
+      status,
+      lastRestocked: todayStr,
+      ...productData,
+      quantity,
+      minThreshold,
+      costPrice: Number(productData.costPrice) || 0,
+      sellingPrice: Number(productData.sellingPrice) || 0
+    };
+
+    setInventoryProducts(prev => [newProduct, ...prev]);
+
+    if (quantity > 0) {
+      const initMovement = {
+        id: `MOV-${Date.now().toString().slice(-5)}`,
+        productId: newId,
+        productName: newProduct.name,
+        sku: newProduct.sku,
+        type: 'IN',
+        quantity: quantity,
+        unitPrice: newProduct.costPrice,
+        totalAmount: quantity * newProduct.costPrice,
+        previousStock: 0,
+        newStock: quantity,
+        reason: 'Initial Inventory Intake',
+        referenceNo: 'INIT-STOCK',
+        performedBy: currentUser?.name || 'Administrator',
+        timestamp: `${todayStr} 10:00 AM`,
+        notes: 'Initial stock intake upon product registration'
+      };
+      setInventoryStockMovements(prev => [initMovement, ...prev]);
+    }
+
+    logAudit('CREATE_PRODUCT', 'Inventory', `Created product ${newProduct.name} (${sku})`);
+    triggerNotification('Product Added', `New item ${newProduct.name} cataloged with ${quantity} units`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    addToast(`Product "${newProduct.name}" created successfully!`, 'success');
+    return newProduct;
+  };
+
+  const updateInventoryProduct = (id, updatedFields) => {
+    setInventoryProducts(prev => prev.map(p => {
+      if (p.id === id) {
+        const qty = updatedFields.quantity !== undefined ? Number(updatedFields.quantity) : p.quantity;
+        const thresh = updatedFields.minThreshold !== undefined ? Number(updatedFields.minThreshold) : p.minThreshold;
+        const status = calculateProductStatus(qty, thresh);
+        return {
+          ...p,
+          ...updatedFields,
+          quantity: qty,
+          minThreshold: thresh,
+          status,
+          costPrice: updatedFields.costPrice !== undefined ? Number(updatedFields.costPrice) : p.costPrice,
+          sellingPrice: updatedFields.sellingPrice !== undefined ? Number(updatedFields.sellingPrice) : p.sellingPrice
+        };
+      }
+      return p;
+    }));
+    logAudit('UPDATE_PRODUCT', 'Inventory', `Updated product details for ${id}`);
+    addToast('Product details updated successfully!', 'success');
+  };
+
+  const deleteInventoryProduct = (id) => {
+    const prd = inventoryProducts.find(p => p.id === id);
+    setInventoryProducts(prev => prev.filter(p => p.id !== id));
+    logAudit('DELETE_PRODUCT', 'Inventory', `Removed product ${prd?.name || id}`);
+    addToast(`Product ${prd?.name || id} removed from catalog`, 'info');
+  };
+
+  const performStockIn = ({ productId, quantity, reference, notes, unitCost, supplierName, performedBy }) => {
+    const qty = Number(quantity);
+    if (!productId || isNaN(qty) || qty <= 0) {
+      addToast('Please enter a valid stock quantity', 'error');
+      return false;
+    }
+
+    const prd = inventoryProducts.find(p => p.id === productId);
+    if (!prd) {
+      addToast('Product not found in catalog', 'error');
+      return false;
+    }
+
+    const prevStock = prd.quantity;
+    const newStock = prevStock + qty;
+    const effectiveCost = Number(unitCost) || prd.costPrice;
+    const status = calculateProductStatus(newStock, prd.minThreshold);
+
+    setInventoryProducts(prev => prev.map(p => p.id === productId ? {
+      ...p,
+      quantity: newStock,
+      status,
+      lastRestocked: todayStr,
+      costPrice: effectiveCost
+    } : p));
+
+    const movement = {
+      id: `MOV-${Date.now().toString().slice(-5)}`,
+      productId,
+      productName: prd.name,
+      sku: prd.sku,
+      type: 'IN',
+      quantity: qty,
+      unitPrice: effectiveCost,
+      totalAmount: qty * effectiveCost,
+      previousStock: prevStock,
+      newStock: newStock,
+      reason: reference || 'Inbound Shipment / Restock',
+      referenceNo: `IN-${Date.now().toString().slice(-4)}`,
+      supplier: supplierName || prd.supplier || 'Primary Supplier',
+      performedBy: performedBy || currentUser?.name || 'Administrator',
+      timestamp: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      notes: notes || 'Stock received into warehouse'
+    };
+    setInventoryStockMovements(prev => [movement, ...prev]);
+
+    logAudit('STOCK_IN', 'Inventory', `Restocked +${qty} units of ${prd.name} (${prd.sku})`);
+    triggerNotification('Stock Inward Received', `Restocked ${qty} units of ${prd.name}. Total stock: ${newStock}`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    addToast(`Successfully received ${qty} units of ${prd.name}!`, 'success');
+    return true;
+  };
+
+  const performStockOut = ({ productId, quantity, reference, notes, destination, department, performedBy }) => {
+    const qty = Number(quantity);
+    if (!productId || isNaN(qty) || qty <= 0) {
+      addToast('Please enter a valid stock quantity', 'error');
+      return false;
+    }
+
+    const prd = inventoryProducts.find(p => p.id === productId);
+    if (!prd) {
+      addToast('Product not found in catalog', 'error');
+      return false;
+    }
+
+    if (prd.quantity < qty) {
+      addToast(`Insufficient stock! Available: ${prd.quantity}, Requested: ${qty}`, 'error');
+      return false;
+    }
+
+    const prevStock = prd.quantity;
+    const newStock = prevStock - qty;
+    const status = calculateProductStatus(newStock, prd.minThreshold);
+
+    setInventoryProducts(prev => prev.map(p => p.id === productId ? {
+      ...p,
+      quantity: newStock,
+      status
+    } : p));
+
+    const movement = {
+      id: `MOV-${Date.now().toString().slice(-5)}`,
+      productId,
+      productName: prd.name,
+      sku: prd.sku,
+      type: 'OUT',
+      quantity: qty,
+      unitPrice: prd.costPrice,
+      totalAmount: qty * prd.costPrice,
+      previousStock: prevStock,
+      newStock: newStock,
+      reason: reference || 'Stock Issuance / Dispatch',
+      referenceNo: `OUT-${Date.now().toString().slice(-4)}`,
+      destination: destination || department || 'Operations',
+      department: department || 'General',
+      performedBy: performedBy || currentUser?.name || 'Administrator',
+      timestamp: `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      notes: notes || 'Stock dispatched for company use'
+    };
+    setInventoryStockMovements(prev => [movement, ...prev]);
+
+    logAudit('STOCK_OUT', 'Inventory', `Dispatched -${qty} units of ${prd.name} to ${destination || department || 'Operations'}`);
+
+    if (status === 'Low Stock' || status === 'Out of Stock') {
+      triggerNotification('Low Stock Alert', `Warning: ${prd.name} is now ${status.toLowerCase()} (${newStock} remaining)`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    }
+
+    addToast(`Successfully dispatched ${qty} units of ${prd.name}!`, 'success');
+    return true;
+  };
+
+  const addInventorySupplier = (supplierData) => {
+    const newId = `SUP-${Date.now().toString().slice(-4)}`;
+    const newSupplier = {
+      id: newId,
+      status: 'Active',
+      rating: 4.8,
+      categories: ['IT Hardware'],
+      totalOrders: 0,
+      paymentTerms: 'Net 30',
+      ...supplierData
+    };
+    setInventorySuppliers(prev => [newSupplier, ...prev]);
+    logAudit('CREATE_SUPPLIER', 'Inventory', `Created vendor ${newSupplier.name}`);
+    addToast(`Supplier "${newSupplier.name}" added successfully!`, 'success');
+    return newSupplier;
+  };
+
+  const updateInventorySupplier = (id, updatedFields) => {
+    setInventorySuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updatedFields } : s));
+    logAudit('UPDATE_SUPPLIER', 'Inventory', `Updated supplier details for ${id}`);
+    addToast('Supplier updated successfully!', 'success');
+  };
+
+  const deleteInventorySupplier = (id) => {
+    const sup = inventorySuppliers.find(s => s.id === id);
+    setInventorySuppliers(prev => prev.filter(s => s.id !== id));
+    logAudit('DELETE_SUPPLIER', 'Inventory', `Removed supplier ${sup?.name || id}`);
+    addToast(`Supplier "${sup?.name || id}" removed`, 'info');
+  };
+
+  const createPurchaseOrder = (poData) => {
+    const poNumber = `PO-2026-${Date.now().toString().slice(-4)}`;
+    const items = poData.items || [];
+    const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitCost || 0)), 0);
+
+    const newPO = {
+      id: `PO-${Date.now().toString().slice(-4)}`,
+      poNumber,
+      orderDate: todayStr,
+      expectedDelivery: poData.expectedDelivery || '2026-10-25',
+      status: currentUser?.role === 'owner' || currentUser?.role === 'admin' ? 'Approved' : 'Pending',
+      items,
+      totalAmount,
+      requestedBy: currentUser?.name || 'Administrator',
+      notes: poData.notes || 'Procurement requisition',
+      ...poData
+    };
+
+    setInventoryPurchaseOrders(prev => [newPO, ...prev]);
+    logAudit('CREATE_PO', 'Inventory', `Created Purchase Order ${poNumber} for ₹${totalAmount.toLocaleString('en-IN')}`);
+    triggerNotification('New Purchase Order', `${poNumber} created for ₹${totalAmount.toLocaleString('en-IN')}`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    addToast(`Purchase Order ${poNumber} submitted!`, 'success');
+    return newPO;
+  };
+
+  const updatePurchaseOrderStatus = (poId, newStatus) => {
+    const po = inventoryPurchaseOrders.find(p => p.id === poId);
+    if (!po) return;
+
+    if (newStatus === 'Received' && po.status !== 'Received') {
+      const nowTime = `${todayStr} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      
+      po.items.forEach(item => {
+        const itemQty = Number(item.quantity) || 1;
+        const matchingPrd = inventoryProducts.find(p => 
+          (item.productId && p.id === item.productId) || 
+          (item.sku && p.sku === item.sku) ||
+          p.name.toLowerCase() === item.name.toLowerCase()
+        );
+
+        if (matchingPrd) {
+          const prevStock = matchingPrd.quantity;
+          const newStock = prevStock + itemQty;
+          const status = calculateProductStatus(newStock, matchingPrd.minThreshold);
+
+          setInventoryProducts(prev => prev.map(p => p.id === matchingPrd.id ? {
+            ...p,
+            quantity: newStock,
+            status,
+            lastRestocked: todayStr
+          } : p));
+
+          const mov = {
+            id: `MOV-${Date.now().toString().slice(-5)}-${Math.floor(Math.random() * 100)}`,
+            productId: matchingPrd.id,
+            productName: matchingPrd.name,
+            sku: matchingPrd.sku,
+            type: 'IN',
+            quantity: itemQty,
+            unitPrice: Number(item.unitCost) || matchingPrd.costPrice,
+            totalAmount: itemQty * (Number(item.unitCost) || matchingPrd.costPrice),
+            previousStock: prevStock,
+            newStock: newStock,
+            reason: `Purchase Order Fulfillment (${po.poNumber})`,
+            referenceNo: po.poNumber,
+            supplier: po.supplierName || 'Procurement Vendor',
+            performedBy: currentUser?.name || 'Administrator',
+            timestamp: nowTime,
+            notes: `Auto-stocked from received Purchase Order ${po.poNumber}`
+          };
+          setInventoryStockMovements(prev => [mov, ...prev]);
+        }
+      });
+
+      triggerNotification('PO Received & Stocked', `Purchase Order ${po.poNumber} marked as received. Stock quantities updated!`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    }
+
+    setInventoryPurchaseOrders(prev => prev.map(p => p.id === poId ? {
+      ...p,
+      status: newStatus,
+      receivedDate: newStatus === 'Received' ? todayStr : p.receivedDate
+    } : p));
+
+    logAudit('UPDATE_PO_STATUS', 'Inventory', `PO ${po.poNumber} status updated to ${newStatus}`);
+    addToast(`Purchase Order ${po.poNumber} marked as ${newStatus}`, 'success');
+  };
+
   return (
     <ERPContext.Provider value={{
       employees,
@@ -1328,6 +1658,22 @@ export const ERPProvider = ({ children }) => {
       toggleWifiAttendance,
       getWifiNetworkInfo,
       isCurrentWifiAuthorized,
+
+      // Inventory Management Module
+      inventoryProducts,
+      inventorySuppliers,
+      inventoryPurchaseOrders,
+      inventoryStockMovements,
+      addInventoryProduct,
+      updateInventoryProduct,
+      deleteInventoryProduct,
+      performStockIn,
+      performStockOut,
+      addInventorySupplier,
+      updateInventorySupplier,
+      deleteInventorySupplier,
+      createPurchaseOrder,
+      updatePurchaseOrderStatus,
 
       auditLogs,
       logAudit
