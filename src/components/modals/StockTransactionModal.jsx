@@ -102,15 +102,11 @@ export const StockTransactionModal = ({ isOpen, onClose, initialType = 'IN', ini
             Cancel
           </Button>
           <Button
-            variant={transactionType === 'IN' ? 'primary' : 'danger'}
+            variant={transactionType === 'IN' ? 'success' : 'danger'}
+            icon={transactionType === 'IN' ? ArrowDownLeft : ArrowUpRight}
             onClick={handleSubmit}
-            className={transactionType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
           >
-            {transactionType === 'IN' ? (
-              <span className="flex items-center gap-1.5"><ArrowDownLeft className="w-4 h-4" /> Confirm Stock In</span>
-            ) : (
-              <span className="flex items-center gap-1.5"><ArrowUpRight className="w-4 h-4" /> Confirm Stock Out</span>
-            )}
+            {transactionType === 'IN' ? 'Confirm Stock In' : 'Confirm Stock Out'}
           </Button>
         </div>
       }

@@ -154,8 +154,8 @@ export const PurchaseOrderModal = ({ isOpen, onClose }) => {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Procurement Items ({items.length})
             </label>
-            <Button type="button" size="sm" variant="outline" onClick={addItemRow} className="text-xs h-8">
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add Product Line
+            <Button type="button" size="sm" variant="outline" icon={Plus} onClick={addItemRow}>
+              Add Product Line
             </Button>
           </div>
 
