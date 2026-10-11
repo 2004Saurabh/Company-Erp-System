@@ -21,6 +21,7 @@ import {
 } from '../data/inventory';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import { api } from '../services/api';
 
 const ERPContext = createContext();
 
@@ -220,6 +221,81 @@ export const ERPProvider = ({ children }) => {
   useEffect(() => { localStorage.setItem('nexora_inventory_pos', JSON.stringify(inventoryPurchaseOrders)); }, [inventoryPurchaseOrders]);
   useEffect(() => { localStorage.setItem('nexora_inventory_movements', JSON.stringify(inventoryStockMovements)); }, [inventoryStockMovements]);
 
+  // Backend Connectivity & SQLite State Synchronization
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const syncBackendData = async () => {
+      try {
+        const [
+          empRes, deptRes, projRes, taskRes, attRes, wfhRes, idCardRes,
+          leavesRes, balancesRes, payRes, prdRes, supRes, poRes, movRes,
+          wifiRes, ancRes, notifRes, logRes, jobRes, candRes, perfRes
+        ] = await Promise.allSettled([
+          api.employees.getAll(),
+          api.departments.getAll(),
+          api.projects.getAll(),
+          api.tasks.getAll(),
+          api.attendance.getAll(),
+          api.attendance.getWFHAuthorized(),
+          api.idCards.getAll(),
+          api.leaves.getAll(),
+          api.leaves.getBalances(),
+          api.payroll.getAll(),
+          api.inventory.getProducts(),
+          api.inventory.getSuppliers(),
+          api.inventory.getPurchaseOrders(),
+          api.inventory.getMovements(),
+          api.wifis.getAll(),
+          api.announcements.getAll(),
+          api.notifications.getAll(),
+          api.audit.getAll(),
+          api.recruitment.getJobs(),
+          api.recruitment.getCandidates(),
+          api.performance.getAll()
+        ]);
+
+        if (!isMounted) return;
+
+        let connected = false;
+        if (empRes.status === 'fulfilled' && Array.isArray(empRes.value) && empRes.value.length > 0) {
+          setEmployees(empRes.value);
+          connected = true;
+        }
+        if (deptRes.status === 'fulfilled' && Array.isArray(deptRes.value) && deptRes.value.length > 0) setDepartments(deptRes.value);
+        if (projRes.status === 'fulfilled' && Array.isArray(projRes.value) && projRes.value.length > 0) setProjects(projRes.value);
+        if (taskRes.status === 'fulfilled' && Array.isArray(taskRes.value) && taskRes.value.length > 0) setTasks(taskRes.value);
+        if (attRes.status === 'fulfilled' && Array.isArray(attRes.value) && attRes.value.length > 0) setAttendance(attRes.value);
+        if (wfhRes.status === 'fulfilled' && Array.isArray(wfhRes.value) && wfhRes.value.length > 0) setWfhAuthorizedEmployees(wfhRes.value);
+        if (idCardRes.status === 'fulfilled' && Array.isArray(idCardRes.value) && idCardRes.value.length > 0) setIdCardRequests(idCardRes.value);
+        if (leavesRes.status === 'fulfilled' && Array.isArray(leavesRes.value) && leavesRes.value.length > 0) setLeaves(leavesRes.value);
+        if (balancesRes.status === 'fulfilled' && Array.isArray(balancesRes.value) && balancesRes.value.length > 0) setLeaveBalances(balancesRes.value);
+        if (payRes.status === 'fulfilled' && Array.isArray(payRes.value) && payRes.value.length > 0) setPayroll(payRes.value);
+        if (prdRes.status === 'fulfilled' && Array.isArray(prdRes.value) && prdRes.value.length > 0) setInventoryProducts(prdRes.value);
+        if (supRes.status === 'fulfilled' && Array.isArray(supRes.value) && supRes.value.length > 0) setInventorySuppliers(supRes.value);
+        if (poRes.status === 'fulfilled' && Array.isArray(poRes.value) && poRes.value.length > 0) setInventoryPurchaseOrders(poRes.value);
+        if (movRes.status === 'fulfilled' && Array.isArray(movRes.value) && movRes.value.length > 0) setInventoryStockMovements(movRes.value);
+        if (wifiRes.status === 'fulfilled' && Array.isArray(wifiRes.value) && wifiRes.value.length > 0) setCompanyWifis(wifiRes.value);
+        if (ancRes.status === 'fulfilled' && Array.isArray(ancRes.value) && ancRes.value.length > 0) setAnnouncements(ancRes.value);
+        if (notifRes.status === 'fulfilled' && Array.isArray(notifRes.value) && notifRes.value.length > 0) setNotifications(notifRes.value);
+        if (logRes.status === 'fulfilled' && Array.isArray(logRes.value) && logRes.value.length > 0) setAuditLogs(logRes.value);
+        if (jobRes.status === 'fulfilled' && Array.isArray(jobRes.value) && jobRes.value.length > 0) setJobOpenings(jobRes.value);
+        if (candRes.status === 'fulfilled' && Array.isArray(candRes.value) && candRes.value.length > 0) setCandidates(candRes.value);
+        if (perfRes.status === 'fulfilled' && Array.isArray(perfRes.value) && perfRes.value.length > 0) setPerformanceReviews(perfRes.value);
+
+        if (connected) {
+          setIsBackendConnected(true);
+        }
+      } catch (err) {
+        console.warn('Backend sync error:', err);
+      }
+    };
+
+    syncBackendData();
+    return () => { isMounted = false; };
+  }, []);
+
   // Log Action Helper
   const logAudit = (action, module, details) => {
     const newLog = {
@@ -234,6 +310,7 @@ export const ERPProvider = ({ children }) => {
       details
     };
     setAuditLogs(prev => [newLog, ...prev]);
+    api.audit.log(newLog).catch(() => {});
   };
 
   // Add Notification Helper
@@ -249,6 +326,7 @@ export const ERPProvider = ({ children }) => {
       link
     };
     setNotifications(prev => [newNotif, ...prev]);
+    api.notifications.create(newNotif).catch(() => {});
   };
 
   // =================== EMPLOYEES CRUD ===================
@@ -262,6 +340,7 @@ export const ERPProvider = ({ children }) => {
       ...empData
     };
     setEmployees(prev => [newEmp, ...prev]);
+    api.employees.create(newEmp).catch(() => {});
     logAudit('Employee Added', 'Employees', `Added ${newEmp.fullName} (${newEmp.id}) to ${newEmp.department}`);
     triggerNotification('New Employee Onboarded', `${newEmp.fullName} joined ${newEmp.department}`, 'employee', ['owner', 'hr', 'manager']);
     addToast(`Employee ${newEmp.fullName} added successfully!`, 'success');
@@ -270,6 +349,7 @@ export const ERPProvider = ({ children }) => {
 
   const updateEmployee = (id, updatedFields) => {
     setEmployees(prev => prev.map(emp => (emp.id === id ? { ...emp, ...updatedFields } : emp)));
+    api.employees.update(id, updatedFields).catch(() => {});
     logAudit('Employee Updated', 'Employees', `Updated details for employee ${id}`);
     addToast('Employee details updated successfully!', 'success');
   };
@@ -277,6 +357,7 @@ export const ERPProvider = ({ children }) => {
   const deleteEmployee = (id) => {
     const emp = employees.find(e => e.id === id);
     setEmployees(prev => prev.filter(e => e.id !== id));
+    api.employees.delete(id).catch(() => {});
     logAudit('Employee Deleted', 'Employees', `Removed employee ${emp?.fullName || id}`);
     addToast(`Employee ${emp?.fullName || id} removed.`, 'info');
   };
@@ -291,6 +372,7 @@ export const ERPProvider = ({ children }) => {
       }
       return emp;
     }));
+    api.employees.toggleStatus(id).catch(() => {});
   };
 
   // =================== DEPARTMENTS CRUD ===================
@@ -303,12 +385,14 @@ export const ERPProvider = ({ children }) => {
       ...deptData
     };
     setDepartments(prev => [...prev, newDept]);
+    api.departments.create(newDept).catch(() => {});
     logAudit('Department Created', 'Departments', `Created ${newDept.name} department`);
     addToast(`Department ${newDept.name} created!`, 'success');
   };
 
   const updateDepartment = (id, updatedFields) => {
     setDepartments(prev => prev.map(d => (d.id === id ? { ...d, ...updatedFields } : d)));
+    api.departments.update(id, updatedFields).catch(() => {});
     logAudit('Department Updated', 'Departments', `Updated department ${id}`);
     addToast('Department updated successfully!', 'success');
   };
@@ -316,6 +400,7 @@ export const ERPProvider = ({ children }) => {
   const deleteDepartment = (id) => {
     const dept = departments.find(d => d.id === id);
     setDepartments(prev => prev.filter(d => d.id !== id));
+    api.departments.delete(id).catch(() => {});
     logAudit('Department Deleted', 'Departments', `Deleted department ${dept?.name || id}`);
     addToast(`Department ${dept?.name || id} deleted.`, 'info');
   };
@@ -331,6 +416,7 @@ export const ERPProvider = ({ children }) => {
       ...projectData
     };
     setProjects(prev => [newPrj, ...prev]);
+    api.projects.create(newPrj).catch(() => {});
     logAudit('Project Created', 'Projects', `Created project: ${newPrj.name}`);
     triggerNotification('New Project Initiated', `Project ${newPrj.name} has been launched`, 'project', ['owner', 'manager']);
     addToast(`Project "${newPrj.name}" created!`, 'success');
@@ -338,6 +424,7 @@ export const ERPProvider = ({ children }) => {
 
   const updateProject = (id, updatedFields) => {
     setProjects(prev => prev.map(p => (p.id === id ? { ...p, ...updatedFields } : p)));
+    api.projects.update(id, updatedFields).catch(() => {});
     logAudit('Project Updated', 'Projects', `Updated project ${id}`);
     addToast('Project updated successfully!', 'success');
   };
@@ -345,6 +432,7 @@ export const ERPProvider = ({ children }) => {
   const deleteProject = (id) => {
     const prj = projects.find(p => p.id === id);
     setProjects(prev => prev.filter(p => p.id !== id));
+    api.projects.delete(id).catch(() => {});
     logAudit('Project Deleted', 'Projects', `Deleted project ${prj?.name || id}`);
     addToast(`Project ${prj?.name || id} deleted.`, 'info');
   };
@@ -390,6 +478,7 @@ export const ERPProvider = ({ children }) => {
     };
 
     setTasks(prev => [newTask, ...prev]);
+    api.tasks.create(newTask).catch(() => {});
     logAudit('Task Created', 'Tasks', `Created task "${newTask.title}" (${newTask.id}) assigned to ${newTask.assignedTo}`);
     triggerNotification(
       'New Task Assigned',
@@ -419,6 +508,7 @@ export const ERPProvider = ({ children }) => {
       }
       return t;
     }));
+    api.tasks.update(id, updatedFields).catch(() => {});
     logAudit('Task Updated', 'Tasks', `Updated details for task ${id}`);
     addToast('Task updated successfully!', 'success');
   };
@@ -452,6 +542,7 @@ export const ERPProvider = ({ children }) => {
     }));
 
     if (updatedTask) {
+      api.tasks.updateStatus(id, newStatus).catch(() => {});
       logAudit('Task Status Changed', 'Tasks', `Moved "${updatedTask.title}" (${id}) to ${newStatus}`);
       if (newStatus === 'Completed') {
         triggerNotification(
@@ -468,11 +559,15 @@ export const ERPProvider = ({ children }) => {
   const addTaskComment = (id, text) => {
     if (!text || !text.trim()) return;
     const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const authorName = currentUser?.name || 'Elena Rostova';
+    const authorRole = currentUser?.role === 'manager' ? 'Manager' : currentUser?.role === 'owner' ? 'Owner' : currentUser?.role === 'hr' ? 'HR' : 'Employee';
+    const avatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150';
+
     const newComment = {
       id: `CMT-${Date.now()}`,
-      author: currentUser?.name || 'Elena Rostova',
-      authorRole: currentUser?.role === 'manager' ? 'Manager' : currentUser?.role === 'owner' ? 'Owner' : currentUser?.role === 'hr' ? 'HR' : 'Employee',
-      avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+      author: authorName,
+      authorRole,
+      avatar,
       text: text.trim(),
       timestamp: `${CURRENT_DATE_REF} ${nowTimeStr}`
     };
@@ -487,7 +582,7 @@ export const ERPProvider = ({ children }) => {
             {
               id: `ACT-${Date.now()}`,
               action: `Added comment: "${text.trim().slice(0, 35)}..."`,
-              user: currentUser?.name || 'Elena Rostova',
+              user: authorName,
               timestamp: `${CURRENT_DATE_REF} ${nowTimeStr}`
             }
           ]
@@ -496,17 +591,20 @@ export const ERPProvider = ({ children }) => {
       return t;
     }));
 
+    api.tasks.addComment(id, text.trim(), authorName, authorRole, avatar).catch(() => {});
     addToast('Comment added.', 'success');
   };
 
   const updateTaskHours = (id, actualHours) => {
     setTasks(prev => prev.map(t => (t.id === id ? { ...t, actualHours: Number(actualHours) } : t)));
+    api.tasks.updateHours(id, actualHours).catch(() => {});
     addToast('Hours updated.', 'info');
   };
 
   const deleteTask = (id) => {
     const t = tasks.find(x => x.id === id);
     setTasks(prev => prev.filter(x => x.id !== id));
+    api.tasks.delete(id).catch(() => {});
     logAudit('Task Deleted', 'Tasks', `Deleted task ${t?.title || id}`);
     addToast('Task deleted successfully.', 'info');
   };
@@ -540,6 +638,7 @@ export const ERPProvider = ({ children }) => {
     }));
 
     if (updatedWifi) {
+      api.wifis.toggleAttendance(wifiId, updatedWifi.attendanceEnabled).catch(() => {});
       const isAllowed = updatedWifi.attendanceEnabled;
       logAudit(
         'WiFi Policy Updated',
@@ -599,6 +698,7 @@ export const ERPProvider = ({ children }) => {
       description: wifiData.description || 'Configured by Administrator'
     };
     setCompanyWifis(prev => [...prev, newWifi]);
+    api.wifis.create(newWifi).catch(() => {});
     logAudit('WiFi Config Added', 'Settings', `Authorized new company WiFi: ${newWifi.ssid} (${newWifi.location}) with Attendance: ${newWifi.attendanceEnabled ? 'Enabled' : 'Disabled'}`);
     addToast(`Company WiFi "${newWifi.ssid}" registered. Attendance is ${newWifi.attendanceEnabled ? 'ALLOWED' : 'DISABLED'}.`, 'success');
   };
@@ -610,6 +710,7 @@ export const ERPProvider = ({ children }) => {
       return;
     }
     setCompanyWifis(prev => prev.filter(w => w.id !== id));
+    api.wifis.delete(id).catch(() => {});
     logAudit('WiFi Config Removed', 'Settings', `Revoked company WiFi: ${target?.ssid || id}`);
     addToast(`Company WiFi network removed.`, 'info');
   };
@@ -676,6 +777,7 @@ export const ERPProvider = ({ children }) => {
     };
 
     setAttendance(prev => [newRecord, ...prev.filter(a => !(a.employeeId === newRecord.employeeId && a.date === todayStr))]);
+    api.attendance.checkIn(newRecord).catch(() => {});
     logAudit('Check-In Verified', 'Attendance', `${newRecord.employeeName} checked in via Company WiFi (${newRecord.networkName} · ${newRecord.networkIp})`);
     addToast(`Checked in successfully at ${timeNow}! (Verified via ${newRecord.networkName})`, 'success');
     return { success: true, record: newRecord };
@@ -696,6 +798,7 @@ export const ERPProvider = ({ children }) => {
       return a;
     }));
 
+    api.attendance.checkOut({ employeeId: empId, date: todayStr }).catch(() => {});
     logAudit('Check-Out', 'Attendance', `Employee checked out at ${timeNow}`);
     addToast(`Checked out successfully at ${timeNow}! Total hours logged.`, 'success');
   };
@@ -714,6 +817,7 @@ export const ERPProvider = ({ children }) => {
       }
       return a;
     }));
+    api.attendance.reset({ employeeId: empId, date: todayStr }).catch(() => {});
     logAudit('Attendance Reset', 'Attendance', `Reset attendance for employee ${empId} to test check-in.`);
     addToast('Attendance reset! Check In button is now available.', 'info');
   };
@@ -767,6 +871,8 @@ export const ERPProvider = ({ children }) => {
       return [newAuth, ...rest];
     });
 
+    api.attendance.authorizeWFH(newAuth).catch(() => {});
+
     logAudit(
       'WFH ID Authorized',
       'Administration',
@@ -788,6 +894,7 @@ export const ERPProvider = ({ children }) => {
   const revokeEmployeeWFH = (empId) => {
     const target = wfhAuthorizedEmployees.find(a => a.employeeId === empId);
     setWfhAuthorizedEmployees(prev => prev.filter(a => a.employeeId !== empId));
+    api.attendance.revokeWFH(empId).catch(() => {});
 
     logAudit(
       'WFH ID Revoked',
@@ -860,6 +967,8 @@ export const ERPProvider = ({ children }) => {
       return [wfhRecord, ...filtered];
     });
 
+    api.attendance.markWFH(wfhRecord).catch(() => {});
+
     logAudit(
       'WFH Attendance Marked',
       'Attendance',
@@ -927,6 +1036,8 @@ export const ERPProvider = ({ children }) => {
       return [newRequest, ...rest];
     });
 
+    api.idCards.request(newRequest).catch(() => {});
+
     logAudit(
       'ID Card Requested',
       'ID Card Operations',
@@ -968,6 +1079,7 @@ export const ERPProvider = ({ children }) => {
     };
 
     setIdCardRequests(prev => prev.map(r => r.id === requestId ? updated : r));
+    api.idCards.approve(requestId, { approvedBy: approverName, notes: approvalNotes }).catch(() => {});
 
     logAudit(
       'ID Card Approved',
@@ -1007,6 +1119,7 @@ export const ERPProvider = ({ children }) => {
     };
 
     setIdCardRequests(prev => prev.map(r => r.id === requestId ? updated : r));
+    api.idCards.reject(requestId, { rejectedBy: reviewerName, reason: reasonText }).catch(() => {});
 
     logAudit(
       'ID Card Rejected',
@@ -1046,6 +1159,7 @@ export const ERPProvider = ({ children }) => {
     const approverTitle = currentUser?.title || 'System Administrator';
     const approverName = currentUser?.name ? `${currentUser.name} (${approverTitle})` : 'Administrator (Saurabh Kumar)';
 
+    const approvedByStr = approverName;
     const newApprovedCard = {
       id: `REQ-ID-${Date.now().toString().slice(-4)}`,
       employeeId: emp.id,
@@ -1072,6 +1186,16 @@ export const ERPProvider = ({ children }) => {
       const rest = prev.filter(r => r.employeeId !== emp.id);
       return [newApprovedCard, ...rest];
     });
+
+    api.idCards.adminIssue({
+      employeeId: emp.id,
+      employeeName: emp.fullName,
+      department: emp.department,
+      designation: emp.designation,
+      badgeNumber: assignedBadgeNum,
+      approvedBy: approvedByStr,
+      notes
+    }).catch(() => {});
 
     logAudit(
       'Admin ID Card Issued',
@@ -1106,6 +1230,7 @@ export const ERPProvider = ({ children }) => {
       ...leaveData
     };
     setLeaves(prev => [newLeave, ...prev]);
+    api.leaves.apply(newLeave).catch(() => {});
     logAudit('Leave Applied', 'Leave Management', `${newLeave.employeeName} applied for ${newLeave.leaveType} (${newLeave.days} days)`);
     triggerNotification('New Leave Application', `${newLeave.employeeName} submitted a leave request`, 'leave', ['manager', 'hr', 'owner'], '/manager/leave');
     addToast('Leave request submitted successfully!', 'success');
@@ -1120,6 +1245,7 @@ export const ERPProvider = ({ children }) => {
       }
       return l;
     }));
+    api.leaves.approve(leaveId, remarks || 'Approved by Manager').catch(() => {});
     addToast('Leave request approved!', 'success');
   };
 
@@ -1132,12 +1258,14 @@ export const ERPProvider = ({ children }) => {
       }
       return l;
     }));
+    api.leaves.reject(leaveId, remarks || 'Declined due to scheduling constraints.').catch(() => {});
     addToast('Leave request rejected.', 'info');
   };
 
   // =================== PAYROLL ===================
   const markPayrollPaid = (id) => {
     setPayroll(prev => prev.map(p => (p.id === id ? { ...p, status: 'Paid', paymentDate: todayStr } : p)));
+    api.payroll.markPaid(id).catch(() => {});
     logAudit('Payroll Disbursed', 'Payroll', `Marked payslip ${id} as Paid`);
     addToast('Payroll record marked as Paid!', 'success');
   };
@@ -1155,6 +1283,7 @@ export const ERPProvider = ({ children }) => {
       ...data
     };
     setAnnouncements(prev => [newAnc, ...prev]);
+    api.announcements.create(newAnc).catch(() => {});
     logAudit('Announcement Published', 'Announcements', `Published: "${newAnc.title}"`);
     triggerNotification('New Announcement', newAnc.title, 'announcement', ['owner', 'hr', 'manager', 'employee'], '/employee/announcements');
     addToast('Announcement published successfully!', 'success');
@@ -1162,10 +1291,12 @@ export const ERPProvider = ({ children }) => {
 
   const togglePinAnnouncement = (id) => {
     setAnnouncements(prev => prev.map(a => (a.id === id ? { ...a, pinned: !a.pinned } : a)));
+    api.announcements.togglePin(id).catch(() => {});
   };
 
   const deleteAnnouncement = (id) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
+    api.announcements.delete(id).catch(() => {});
     logAudit('Announcement Deleted', 'Announcements', `Deleted announcement ${id}`);
     addToast('Announcement deleted.', 'info');
   };
@@ -1178,6 +1309,7 @@ export const ERPProvider = ({ children }) => {
       }
       return a;
     }));
+    api.announcements.markRead(id, uid).catch(() => {});
   };
 
   // =================== RECRUITMENT ===================
@@ -1189,6 +1321,7 @@ export const ERPProvider = ({ children }) => {
       }
       return c;
     }));
+    api.recruitment.updateStage(candidateId, newStage).catch(() => {});
     addToast(`Candidate moved to ${newStage}`, 'info');
   };
 
@@ -1202,6 +1335,7 @@ export const ERPProvider = ({ children }) => {
       ...jobData
     };
     setJobOpenings(prev => [newJob, ...prev]);
+    api.recruitment.createJob(newJob).catch(() => {});
     logAudit('Job Opening Created', 'Recruitment', `Created opening for ${newJob.title}`);
     addToast(`Job opening "${newJob.title}" created!`, 'success');
   };
@@ -1216,8 +1350,8 @@ export const ERPProvider = ({ children }) => {
       ...candData
     };
     setCandidates(prev => [newCand, ...prev]);
-    // increment applicant count on job
     setJobOpenings(prev => prev.map(j => j.id === newCand.jobId ? { ...j, applicantsCount: j.applicantsCount + 1 } : j));
+    api.recruitment.createCandidate(newCand).catch(() => {});
     logAudit('Candidate Added', 'Recruitment', `Added candidate ${newCand.name}`);
     addToast(`Candidate ${newCand.name} registered!`, 'success');
   };
@@ -1232,6 +1366,7 @@ export const ERPProvider = ({ children }) => {
       ...reviewData
     };
     setPerformanceReviews(prev => [newReview, ...prev]);
+    api.performance.create(newReview).catch(() => {});
     logAudit('Performance Review Added', 'Performance', `Reviewed employee ${newReview.employeeName}`);
     triggerNotification('Performance Review Available', `Review for ${newReview.reviewPeriod} has been published`, 'performance', ['employee'], '/employee/performance');
     addToast('Performance review submitted!', 'success');
@@ -1240,15 +1375,18 @@ export const ERPProvider = ({ children }) => {
   // =================== NOTIFICATIONS ===================
   const markNotificationRead = (id) => {
     setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+    api.notifications.markRead(id).catch(() => {});
   };
 
   const markAllNotificationsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    api.notifications.markAllRead().catch(() => {});
     addToast('All notifications marked as read', 'info');
   };
 
   const deleteNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    api.notifications.delete(id).catch(() => {});
   };
 
   // =================== INVENTORY MANAGEMENT ===================
@@ -1302,6 +1440,7 @@ export const ERPProvider = ({ children }) => {
       setInventoryStockMovements(prev => [initMovement, ...prev]);
     }
 
+    api.inventory.createProduct(newProduct).catch(() => {});
     logAudit('CREATE_PRODUCT', 'Inventory', `Created product ${newProduct.name} (${sku})`);
     triggerNotification('Product Added', `New item ${newProduct.name} cataloged with ${quantity} units`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
     addToast(`Product "${newProduct.name}" created successfully!`, 'success');
@@ -1326,6 +1465,7 @@ export const ERPProvider = ({ children }) => {
       }
       return p;
     }));
+    api.inventory.updateProduct(id, updatedFields).catch(() => {});
     logAudit('UPDATE_PRODUCT', 'Inventory', `Updated product details for ${id}`);
     addToast('Product details updated successfully!', 'success');
   };
@@ -1333,6 +1473,7 @@ export const ERPProvider = ({ children }) => {
   const deleteInventoryProduct = (id) => {
     const prd = inventoryProducts.find(p => p.id === id);
     setInventoryProducts(prev => prev.filter(p => p.id !== id));
+    api.inventory.deleteProduct(id).catch(() => {});
     logAudit('DELETE_PRODUCT', 'Inventory', `Removed product ${prd?.name || id}`);
     addToast(`Product ${prd?.name || id} removed from catalog`, 'info');
   };
@@ -1382,6 +1523,16 @@ export const ERPProvider = ({ children }) => {
       notes: notes || 'Stock received into warehouse'
     };
     setInventoryStockMovements(prev => [movement, ...prev]);
+
+    api.inventory.stockIn({
+      productId,
+      quantity: qty,
+      reference,
+      notes,
+      unitCost: effectiveCost,
+      supplierName,
+      performedBy: performedBy || currentUser?.name || 'Administrator'
+    }).catch(() => {});
 
     logAudit('STOCK_IN', 'Inventory', `Restocked +${qty} units of ${prd.name} (${prd.sku})`);
     triggerNotification('Stock Inward Received', `Restocked ${qty} units of ${prd.name}. Total stock: ${newStock}`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
@@ -1438,6 +1589,16 @@ export const ERPProvider = ({ children }) => {
     };
     setInventoryStockMovements(prev => [movement, ...prev]);
 
+    api.inventory.stockOut({
+      productId,
+      quantity: qty,
+      reference,
+      notes,
+      destination,
+      department,
+      performedBy: performedBy || currentUser?.name || 'Administrator'
+    }).catch(() => {});
+
     logAudit('STOCK_OUT', 'Inventory', `Dispatched -${qty} units of ${prd.name} to ${destination || department || 'Operations'}`);
 
     if (status === 'Low Stock' || status === 'Out of Stock') {
@@ -1460,6 +1621,7 @@ export const ERPProvider = ({ children }) => {
       ...supplierData
     };
     setInventorySuppliers(prev => [newSupplier, ...prev]);
+    api.inventory.createSupplier(newSupplier).catch(() => {});
     logAudit('CREATE_SUPPLIER', 'Inventory', `Created vendor ${newSupplier.name}`);
     addToast(`Supplier "${newSupplier.name}" added successfully!`, 'success');
     return newSupplier;
@@ -1467,6 +1629,7 @@ export const ERPProvider = ({ children }) => {
 
   const updateInventorySupplier = (id, updatedFields) => {
     setInventorySuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updatedFields } : s));
+    api.inventory.updateSupplier(id, updatedFields).catch(() => {});
     logAudit('UPDATE_SUPPLIER', 'Inventory', `Updated supplier details for ${id}`);
     addToast('Supplier updated successfully!', 'success');
   };
@@ -1474,6 +1637,7 @@ export const ERPProvider = ({ children }) => {
   const deleteInventorySupplier = (id) => {
     const sup = inventorySuppliers.find(s => s.id === id);
     setInventorySuppliers(prev => prev.filter(s => s.id !== id));
+    api.inventory.deleteSupplier(id).catch(() => {});
     logAudit('DELETE_SUPPLIER', 'Inventory', `Removed supplier ${sup?.name || id}`);
     addToast(`Supplier "${sup?.name || id}" removed`, 'info');
   };
@@ -1497,6 +1661,7 @@ export const ERPProvider = ({ children }) => {
     };
 
     setInventoryPurchaseOrders(prev => [newPO, ...prev]);
+    api.inventory.createPurchaseOrder(newPO).catch(() => {});
     logAudit('CREATE_PO', 'Inventory', `Created Purchase Order ${poNumber} for ₹${totalAmount.toLocaleString('en-IN')}`);
     triggerNotification('New Purchase Order', `${poNumber} created for ₹${totalAmount.toLocaleString('en-IN')}`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
     addToast(`Purchase Order ${poNumber} submitted!`, 'success');
@@ -1552,7 +1717,10 @@ export const ERPProvider = ({ children }) => {
         }
       });
 
+      api.inventory.receivePurchaseOrder(poId, { receivedBy: currentUser?.name || 'Administrator' }).catch(() => {});
       triggerNotification('PO Received & Stocked', `Purchase Order ${po.poNumber} marked as received. Stock quantities updated!`, 'inventory', ['owner', 'admin', 'manager'], '/admin/inventory');
+    } else {
+      api.inventory.updatePOStatus(poId, newStatus).catch(() => {});
     }
 
     setInventoryPurchaseOrders(prev => prev.map(p => p.id === poId ? {
@@ -1567,6 +1735,7 @@ export const ERPProvider = ({ children }) => {
 
   return (
     <ERPContext.Provider value={{
+      isBackendConnected,
       employees,
       addEmployee,
       updateEmployee,

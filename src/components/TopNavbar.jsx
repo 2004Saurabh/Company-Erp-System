@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Search, Sun, Moon, User, Settings, HelpCircle, LogOut, ChevronDown, Shield, Crown, Users2, BarChart4, UserCheck, Check } from 'lucide-react';
+import { Menu, Search, Sun, Moon, User, Settings, HelpCircle, LogOut, ChevronDown, Shield, Crown, Users2, BarChart4, UserCheck, Check, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useERP } from '../context/ERPContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import NotificationPanel from './NotificationPanel';
@@ -9,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const TopNavbar = ({ onOpenMobileSidebar, onOpenSearch }) => {
   const { currentUser, role, logout, switchRole } = useAuth();
+  const { isBackendConnected } = useERP();
   const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -102,6 +104,19 @@ export const TopNavbar = ({ onOpenMobileSidebar, onOpenSearch }) => {
         <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="capitalize">{role || 'User'}</span> Workspace
+        </div>
+
+        {/* Backend & Database Indicator Badge */}
+        <div
+          className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-all ${
+            isBackendConnected
+              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+              : 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+          }`}
+          title={isBackendConnected ? "Connected to persistent SQLite database (server/database/nexora.db)" : "SQLite DB sync ready"}
+        >
+          <Database className={`w-3.5 h-3.5 ${isBackendConnected ? 'text-emerald-500' : 'text-slate-400'}`} />
+          <span>{isBackendConnected ? 'SQLite Live' : 'SQLite Sync'}</span>
         </div>
 
         {/* 1-Click Instant Persona Switch Button */}
